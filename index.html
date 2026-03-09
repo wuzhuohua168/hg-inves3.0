@@ -786,9 +786,16 @@ async function fetchAlerts(){
             `<li><span class="alert-tag">市场</span>${a}</li>`
         ).join("");
 
-        const newsItems = (data.newsAlerts || []).map(a =>
-            `<li><span class="alert-tag">事件</span>${a}</li>`
-        ).join("");
+        const newsItems = (data.newsAlerts || []).map(a => {
+            if (typeof a === "string"){
+                return `<li><span class="alert-tag">事件</span>${a}</li>`;
+            }
+            const title = a.title || "";
+            const link = a.link || "";
+            const tag = a.tag || "事件";
+            const safeLink = link ? `<a href="${link}" target="_blank" rel="noopener">来源</a>` : "";
+            return `<li><span class="alert-tag">${tag}</span>${title} ${safeLink}</li>`;
+        }).join("");
 
         const marketBlock = marketItems
             ? `<div><strong>市场异常</strong><ul>${marketItems}</ul></div>`
@@ -801,6 +808,7 @@ async function fetchAlerts(){
         const summary = data.summary ? `<div class="alert-meta">${data.summary}</div>` : "";
 
         listEl.innerHTML = `${marketBlock}${newsBlock}${summary}`;
+        window.__alertData = data;
     }catch(err){
         listEl.textContent = "预警数据获取失败";
     }
@@ -827,11 +835,37 @@ async function copyMacro(){
     const light = document.getElementById("macroLight");
     const advice = document.getElementById("macroAdvice");
     const meta = document.getElementById("macroMeta");
+    const alertTitle = document.getElementById("alertTitle");
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const alertLines = [];
+    if (marketAlerts.length){
+        alertLines.push("市场异常：");
+        marketAlerts.forEach(a => alertLines.push("• " + a));
+    }
+    if (newsAlerts.length){
+        alertLines.push("宏观事件：");
+        newsAlerts.forEach(a => {
+            if (typeof a === "string"){
+                alertLines.push("• " + a);
+            } else {
+                const t = a.title || "";
+                const l = a.link || "";
+                const tag = a.tag || "事件";
+                alertLines.push("• [" + tag + "] " + t + (l ? " (" + l + ")" : ""));
+            }
+        });
+    }
+    if (alertData.summary) alertLines.push(alertData.summary);
+    const alertText = alertLines.join("\n");
     const text = [
         "宏观AI策略",
         light ? light.textContent.trim() : "",
         advice ? advice.textContent.trim() : "",
-        meta ? meta.textContent.trim() : ""
+        meta ? meta.textContent.trim() : "",
+        alertTitle ? alertTitle.textContent.trim() : "宏观预警",
+        alertText || "无"
     ].filter(Boolean).join("\n");
     try{
         await navigator.clipboard.writeText(text);
