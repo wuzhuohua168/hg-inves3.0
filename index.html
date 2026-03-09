@@ -593,6 +593,7 @@ function buildStrategy(cycle, ctx){
                 <li>原油 30%</li>
                 <li>铜 20%</li>
                 <li>BTC 10%</li>
+                <li>黄金对冲 5–10%</li>
             </ul>`;
     }
     if (cycle === "中性/后期周期"){
@@ -660,6 +661,7 @@ async function macroCheck(){
     const {
         gold, oil, copper, us10y, dxy, btc, sp500,
         dxyPrev, us10yPrev, sp500Prev,
+        vix, vixPrev, hy, hyPrev,
         ma90
     } = data;
 
@@ -680,6 +682,8 @@ async function macroCheck(){
 
     const dxyDown = dxyPrev !== null ? dxy < dxyPrev : false;
     const us10yDown = us10yPrev !== null ? us10y < us10yPrev : false;
+    const vixUp = vixPrev !== null ? vix > vixPrev : false;
+    const hyUp = hyPrev !== null ? hy > hyPrev : false;
 
     let score = 0;
     if (copperOilTrend === "上升") score += 2;
@@ -687,6 +691,8 @@ async function macroCheck(){
     if (goldOilTrend === "上升") score -= 1;
     if (us10yTrend === "下降" || us10yDown) score += 1;
     if (dxyTrend === "下降" || dxyDown) score += 1;
+    if (vixUp) score -= 1;
+    if (hyUp) score -= 1;
 
     let cycle = "中性";
     let signalClass = "yellow";
@@ -714,6 +720,8 @@ async function macroCheck(){
             <li>DXY (Trade-Weighted)：${dxy.toFixed(2)}</li>
             <li>BTC：${btc ? btc.toFixed(2) : "N/A"}</li>
             <li>SP500：${sp500 ? sp500.toFixed(2) : "N/A"}</li>
+            <li>VIX：${vix ? vix.toFixed(2) : "N/A"}</li>
+            <li>HY利差：${hy ? hy.toFixed(2) : "N/A"}</li>
         </ul>
         <div><strong>90日趋势：</strong></div>
         <ul>
