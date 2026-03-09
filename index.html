@@ -734,6 +734,25 @@ function buildEventImpact(){
     return `<div><strong>事件影响：</strong>${lines.join("；")}</div>`;
 }
 
+function getEventScore(){
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const newsText = newsAlerts.map(a => typeof a === "string" ? a : (a.title || "")).join(" ");
+    const marketText = marketAlerts.join(" ");
+    const text = (newsText + " " + marketText).toLowerCase();
+
+    const hasWar = text.includes("war") || text.includes("战争") || text.includes("冲突") || text.includes("iran") || text.includes("中东");
+    const hasOilShock = text.includes("oil") || text.includes("油价") || text.includes("能源");
+    const hasRate = text.includes("rate") || text.includes("加息") || text.includes("hike");
+
+    let eventScore = 0;
+    if (hasWar) eventScore -= 1;
+    if (hasOilShock) eventScore -= 1;
+    if (hasRate) eventScore -= 1;
+    return eventScore;
+}
+
 function buildConsistencyCheck(stage, ctx){
     const warns = [];
     if (stage === "滞胀" || stage === "衰退"){
@@ -810,12 +829,20 @@ async function macroCheck(){
 
     let score = 0;
     if (copperOilTrend === "上升") score += 2;
+    if (copperOilTrend === "下降") score -= 1;
     if (stockOilTrend === "上升") score += 1;
     if (goldOilTrend === "上升") score -= 1;
     if (us10yTrend === "下降" || us10yDown) score += 1;
     if (dxyTrend === "下降" || dxyDown) score += 1;
-    if (vixUp) score -= 1;
-    if (hyUp) score -= 1;
+    if (vix != null){
+        if (vix > 30) score -= 2;
+        else if (vix > 25 || vixUp) score -= 1;
+    }
+    if (hy != null){
+        if (hy > 6) score -= 2;
+        else if (hy > 4 || hyUp) score -= 1;
+    }
+    score += getEventScore();
 
     let stage = "扩张后期";
     let signalClass = "yellow";
@@ -1059,10 +1086,10 @@ window.onload = function(){
     initQuoteObserver();
     initMacroToggleButton();
     loadChart("UKOIL");
-    macroCheck();
-    setInterval(macroCheck, 60000);
     fetchAlerts();
     setInterval(fetchAlerts, 300000);
+    macroCheck();
+    setInterval(macroCheck, 60000);
 };
 </script>
 
