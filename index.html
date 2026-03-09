@@ -325,7 +325,7 @@ input{
             style="background:#f59e0b;color:#fff;border:none;padding:0 12px;border-radius:8px;">
             Mac
             </button>
-            <button onclick="toggleMacroPanel()"
+            <button id="macroToggleBtn"
             style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
             收起
             </button>
@@ -563,7 +563,7 @@ function setRange(type, btn){
     highlightButton(btn);
 }
 
-function buildStrategy(cycle, ctx){
+function buildStrategy(stage, ctx){
     const copperLine = ctx.copperTrend === "上升"
         ? "铜油比上升 → 工业需求增强"
         : ctx.copperTrend === "下降"
@@ -573,7 +573,7 @@ function buildStrategy(cycle, ctx){
     const stockLine = ctx.stockTrend === "上升"
         ? "股油比上升 → 企业利润改善"
         : ctx.stockTrend === "下降"
-            ? "股油比下降 → 成本压力上升"
+            ? "股油比下降 → 企业利润压力增加"
             : "股油比持平 → 利润信号不明";
 
     const goldLine = ctx.goldTrend === "上升"
@@ -598,47 +598,101 @@ function buildStrategy(cycle, ctx){
                 ? "HY 利差扩大 → 信用压力增加"
                 : "HY 利差稳定 → 金融压力有限";
 
-    if (cycle === "扩张/后期周期"){
+    if (stage === "复苏"){
         return `
             <div>${copperLine}</div>
             <div>${stockLine}</div>
             <div>${goldLine}</div>
             <div>${vixLine}</div>
             <div>${hyLine}</div>
-            <div>建议配置：</div>
+            <div>交易建议：</div>
             <ul>
-                <li>SP500 40%</li>
-                <li>原油 30%</li>
-                <li>铜 20%</li>
-                <li>BTC 10%</li>
-                <li>黄金对冲 5–10%</li>
+                <li>做多：SP500、NASDAQ、工业金属、小盘股</li>
+                <li>做空：黄金、美元</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>股票 70%</li>
+                <li>商品 20%</li>
+                <li>现金 10%</li>
             </ul>`;
     }
-    if (cycle === "中性/后期周期"){
+    if (stage === "扩张"){
         return `
             <div>${copperLine}</div>
             <div>${stockLine}</div>
             <div>${goldLine}</div>
             <div>${vixLine}</div>
             <div>${hyLine}</div>
-            <div>策略：</div>
+            <div>交易建议：</div>
             <ul>
-                <li>降低杠杆</li>
-                <li>维持均衡配置</li>
+                <li>做多：科技股、周期股、铜、新兴市场</li>
+                <li>减持：债券、黄金</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>股票 80%</li>
+                <li>商品 10%</li>
+                <li>现金 10%</li>
             </ul>`;
     }
-    if (cycle === "收缩/滞胀"){
+    if (stage === "扩张后期"){
         return `
             <div>${copperLine}</div>
             <div>${stockLine}</div>
             <div>${goldLine}</div>
             <div>${vixLine}</div>
             <div>${hyLine}</div>
-            <div>策略：</div>
+            <div>交易建议：</div>
             <ul>
-                <li>做多长期国债</li>
-                <li>做多黄金</li>
-                <li>减少股票/周期股</li>
+                <li>做多：能源、价值股、黄金</li>
+                <li>减少：成长股、小盘股</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>股票 50%</li>
+                <li>能源 20%</li>
+                <li>黄金 20%</li>
+                <li>现金 10%</li>
+            </ul>`;
+    }
+    if (stage === "滞胀"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
+            <div>交易建议：</div>
+            <ul>
+                <li>做多：黄金、能源、大宗商品</li>
+                <li>做空：科技股、债券</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>黄金 35%</li>
+                <li>能源 35%</li>
+                <li>股票 20%</li>
+                <li>现金 10%</li>
+            </ul>`;
+    }
+    if (stage === "衰退"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
+            <div>交易建议：</div>
+            <ul>
+                <li>做多：美债、黄金、美元</li>
+                <li>做空：股票、工业金属</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>债券 50%</li>
+                <li>黄金 25%</li>
+                <li>现金 25%</li>
             </ul>`;
     }
     return `
@@ -652,6 +706,50 @@ function buildStrategy(cycle, ctx){
             <li>降低杠杆</li>
             <li>维持均衡配置</li>
         </ul>`;
+}
+
+function buildEventImpact(){
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const newsText = newsAlerts.map(a => typeof a === "string" ? a : (a.title || "")).join(" ");
+    const marketText = marketAlerts.join(" ");
+    const text = (newsText + " " + marketText).toLowerCase();
+
+    const hasWar = text.includes("war") || text.includes("战争") || text.includes("冲突") || text.includes("iran") || text.includes("中东");
+    const hasOilShock = text.includes("oil") || text.includes("油价") || text.includes("能源");
+    const hasRate = text.includes("rate") || text.includes("加息") || text.includes("hike");
+
+    const lines = [];
+    if (hasWar || hasOilShock){
+        lines.push("地缘/能源扰动 → 短期利好能源与黄金，利空航空/高耗能行业");
+    }
+    if (hasRate){
+        lines.push("利率收紧 → 成长股承压，现金与短债相对占优");
+    }
+    if (!lines.length){
+        lines.push("暂无显著事件冲击信号");
+    }
+
+    return `<div><strong>事件影响：</strong>${lines.join("；")}</div>`;
+}
+
+function buildConsistencyCheck(stage, ctx){
+    const warns = [];
+    if (stage === "滞胀" || stage === "衰退"){
+        if (ctx.goldOilTrend !== "上升" && ctx.oilTrend !== "上升"){
+            warns.push("黄金/油价未确认避险或通胀压力");
+        }
+    }
+    if (stage === "复苏" || stage === "扩张"){
+        if (ctx.copperOilTrend !== "上升" && ctx.stockOilTrend !== "上升"){
+            warns.push("铜油比/股油比未确认扩张");
+        }
+    }
+    if (!warns.length){
+        return `<div><strong>一致性检查：</strong>宏观信号与市场价格一致。</div>`;
+    }
+    return `<div><strong>一致性检查：</strong>${warns.join("；")}。</div>`;
 }
 
 function trendLabel(current, ma){
@@ -701,6 +799,7 @@ async function macroCheck(){
     const goldOilTrend = trendLabel(goldOil, goldOilMA);
     const copperOilTrend = trendLabel(copperOil, copperOilMA);
     const stockOilTrend = trendLabel(stockOil, stockOilMA);
+    const oilTrend = trendLabel(oil, ma90 && ma90.oil ? ma90.oil : null);
     const us10yTrend = trendLabel(us10y, ma90 && ma90.us10y ? ma90.us10y : null);
     const dxyTrend = trendLabel(dxy, ma90 && ma90.dxy ? ma90.dxy : null);
 
@@ -718,23 +817,29 @@ async function macroCheck(){
     if (vixUp) score -= 1;
     if (hyUp) score -= 1;
 
-    let cycle = "中性";
+    let stage = "扩张后期";
     let signalClass = "yellow";
 
-    if (score >= 3){
-        cycle = "扩张/后期周期";
+    if (score >= 4){
+        stage = "复苏";
         signalClass = "green";
-    } else if (score <= 0){
-        cycle = "收缩/滞胀";
-        signalClass = "red";
-    } else {
-        cycle = "中性/后期周期";
+    } else if (score >= 2){
+        stage = "扩张";
+        signalClass = "green";
+    } else if (score >= 0){
+        stage = "扩张后期";
         signalClass = "yellow";
+    } else if (score >= -2){
+        stage = "滞胀";
+        signalClass = "yellow";
+    } else {
+        stage = "衰退";
+        signalClass = "red";
     }
 
-    document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${cycle}（评分 ${score}）`;
+    document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score}）`;
     document.getElementById("macroAdvice").innerHTML = `
-        <div><strong>当前宏观周期：</strong>${cycle}</div>
+        <div><strong>宏观状态：</strong>${stage}</div>
         <div><strong>关键指标：</strong></div>
         <ul>
             <li>金油比：${goldOil.toFixed(2)}</li>
@@ -756,12 +861,19 @@ async function macroCheck(){
             <li>DXY：${dxyTrend}（MA90 ${ma90 && ma90.dxy ? ma90.dxy.toFixed(2) : "N/A"}）</li>
         </ul>
         <div><strong>AI策略提示：</strong></div>
-        ${buildStrategy(cycle, {
+        ${buildStrategy(stage, {
             goldTrend: goldOilTrend,
             copperTrend: copperOilTrend,
             stockTrend: stockOilTrend,
             vix: vix,
             hy: hy
+        })}
+        ${buildEventImpact()}
+        ${buildConsistencyCheck(stage, {
+            goldOilTrend,
+            copperOilTrend,
+            stockOilTrend,
+            oilTrend
         })}
         <div style="margin-top:8px;font-size:11px;color:#555;">
             数据口径：铜 USD/ton → USD/lb；油 USD/barrel；DXY 为贸易加权指数（FRED）。
@@ -824,11 +936,47 @@ function backToQuotes(){
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function toggleMacroPanel(){
+function toggleMacroPanel(evt){
     const panel = document.getElementById("macroPanel");
-    const btn = event && event.currentTarget ? event.currentTarget : null;
+    const btn = evt && evt.currentTarget ? evt.currentTarget : document.getElementById("macroToggleBtn");
     const collapsed = panel.classList.toggle("collapsed");
     if (btn) btn.textContent = collapsed ? "展开" : "收起";
+}
+
+function initMacroToggleButton(){
+    const btn = document.getElementById("macroToggleBtn");
+    if (!btn) return;
+    let touchMoved = false;
+    let startX = 0;
+    let startY = 0;
+    let lastTouchToggle = 0;
+
+    btn.addEventListener("touchstart", (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        touchMoved = false;
+        startX = t.clientX;
+        startY = t.clientY;
+    }, { passive: true });
+
+    btn.addEventListener("touchmove", (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        const dx = Math.abs(t.clientX - startX);
+        const dy = Math.abs(t.clientY - startY);
+        if (dx > 6 || dy > 6) touchMoved = true;
+    }, { passive: true });
+
+    btn.addEventListener("touchend", (e) => {
+        if (touchMoved) return;
+        lastTouchToggle = Date.now();
+        toggleMacroPanel(e);
+    });
+
+    btn.addEventListener("click", (e) => {
+        if (Date.now() - lastTouchToggle < 500) return;
+        toggleMacroPanel(e);
+    });
 }
 
 async function copyMacro(){
@@ -909,6 +1057,7 @@ function toggleNews(){
 window.onload = function(){
     renderQuoteGrid();
     initQuoteObserver();
+    initMacroToggleButton();
     loadChart("UKOIL");
     macroCheck();
     setInterval(macroCheck, 60000);
