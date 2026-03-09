@@ -1,0 +1,853 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HG Investing Pro</title>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+body{
+    background:#f0f3f7;
+    font-family:-apple-system,sans-serif;
+    height:100vh;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    overflow:auto;
+}
+
+.main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+
+.control-panel{
+    background:#fff;
+    padding:10px;
+    border-bottom:1px solid #eee;
+    overflow:visible;
+}
+
+.action-row{
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+}
+.action-row button{
+    white-space:nowrap;
+}
+
+.chart-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    margin-bottom:10px;
+}
+
+.quote-tile{
+    position:relative;
+    background:#f1f3f6;
+    border-radius:8px;
+    overflow:hidden;
+    height:54px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 8px;
+}
+
+.quote-label{
+    font-size:9px;
+    color:#555;
+    pointer-events:none;
+    white-space:nowrap;
+}
+
+.quote-click{
+    position:absolute;
+    inset:0;
+    cursor:pointer;
+    z-index:3;
+}
+
+input{
+    padding:8px;
+    border-radius:6px;
+    border:1px solid #ddd;
+}
+
+#chart-wrap{
+    flex:1;
+    width:100%;
+    position:relative;
+}
+#stock-chart-container{
+    width:100%;
+    height:100%;
+    position:relative;
+    z-index:1;
+}
+#stock-chart-container iframe{
+    position:relative;
+    z-index:1;
+}
+
+#cycle-bar{
+    position:absolute;
+    left:10px;
+    bottom:36px;
+    display:flex;
+    gap:6px;
+    padding:4px 6px;
+    background:rgba(255,255,255,0.9);
+    border:1px solid #eee;
+    border-radius:8px;
+    z-index:10;
+    pointer-events:auto;
+}
+.cycle-btn{
+    padding:4px 8px;
+    font-size:12px;
+    background:#f3f4f6;
+    border-radius:6px;
+    cursor:pointer;
+    user-select:none;
+}
+.cycle-btn:hover{background:#dbeafe;}
+.cycle-btn.active{background:#dbeafe;color:#1e40af;font-weight:bold;}
+
+#macroLight{
+    margin:6px 0;
+    padding:6px;
+    border-radius:6px;
+    font-size:12px;
+    background:#3b82f6;
+    color:#fff;
+}
+
+#macroAdvice{
+    margin:6px 0;
+    padding:6px;
+    border-radius:6px;
+    font-size:12px;
+    background:#e0f2fe;
+    color:#000;
+}
+
+#macroMeta{
+    margin-top:6px;
+    font-size:11px;
+    color:#666;
+}
+
+#alertPanel{
+    margin-top:8px;
+    padding:8px;
+    border-radius:8px;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+}
+#alertTitle{
+    font-weight:bold;
+    font-size:12px;
+    color:#9a3412;
+    margin-bottom:6px;
+}
+#alertList{
+    font-size:12px;
+    color:#3f3f46;
+}
+#alertList ul{
+    margin:6px 0 0 16px;
+    padding:0;
+}
+.alert-tag{
+    display:inline-block;
+    padding:2px 6px;
+    border-radius:6px;
+    font-size:11px;
+    background:#fee2e2;
+    color:#991b1b;
+    margin-right:6px;
+}
+.alert-meta{
+    font-size:11px;
+    color:#6b7280;
+    margin-top:6px;
+}
+
+#macroPanel{
+    overflow:hidden;
+    max-height:600px;
+    transition:max-height 0.25s ease;
+}
+#macroPanel.collapsed{
+    max-height:0;
+}
+
+.signal{
+    display:inline-block;
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    margin-right:6px;
+}
+.green{background:#00ff90;}
+.yellow{background:#ffd000;}
+.red{background:#ff4040;}
+
+#translate-panel,
+#news-panel{
+    display:none;
+    border-top:1px solid #eee;
+    flex:1;
+    min-height:70dvh;
+}
+#translate-panel iframe,
+#news-panel iframe{
+    width:100%;
+    height:100dvh;
+    border:0;
+}
+
+#back-to-quotes{
+    position:fixed;
+    right:12px;
+    bottom:12px;
+    z-index:20;
+    background:#111827;
+    color:#fff;
+    border:none;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:12px;
+    display:none;
+}
+
+
+@media (max-width: 1024px){
+    body{
+        overflow:auto;
+    }
+    .main{
+        flex:initial;
+        min-height:100dvh;
+    }
+    .control-panel{
+        max-height:none;
+        overflow:visible;
+    }
+    .chart-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+    .quote-tile{
+        height:60px;
+        padding:6px;
+    }
+    .quote-label{
+        font-size:11px;
+    }
+    .quote-tile .tradingview-widget-container{
+        transform:scale(0.8);
+        transform-origin:left center;
+    }
+    #chart-wrap{
+        min-height:70dvh;
+    }
+    #translate-panel,
+    #news-panel{
+        min-height:70dvh;
+    }
+}
+
+@media (max-width: 600px){
+    .control-panel{
+        max-height:none;
+        overflow:visible;
+    }
+    .quote-tile{
+        height:56px;
+    }
+    .quote-label{
+        font-size:10px;
+    }
+    .quote-tile .tradingview-widget-container{
+        transform:scale(0.7);
+        transform-origin:left center;
+    }
+    #chart-wrap{
+        min-height:100dvh;
+        height:100dvh;
+    }
+    #translate-panel,
+    #news-panel{
+        min-height:100dvh;
+        height:100dvh;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="main">
+
+    <div class="control-panel">
+
+        <div class="chart-grid" id="quote-grid"></div>
+
+        <div class="action-row">
+            <input type="text" id="stock-search" placeholder="自定义代码 如 BTCUSDT" style="flex:1;">
+            <button onclick="updateStockChart()"
+            style="background:#4a90e2;color:#fff;border:none;padding:0 15px;border-radius:8px;">
+            check
+            </button>
+            <button onclick="toggleTranslate()"
+            style="background:#6a5acd;color:#fff;border:none;padding:0 12px;border-radius:8px;">
+            war
+            </button>
+            <button onclick="toggleNews()"
+            style="background:#ff6a00;color:#fff;border:none;padding:0 12px;border-radius:8px;">
+            news
+            </button>
+            <button onclick="macroCheck()"
+            style="background:#f59e0b;color:#fff;border:none;padding:0 12px;border-radius:8px;">
+            Mac
+            </button>
+            <button onclick="toggleMacroPanel()"
+            style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+            收起
+            </button>
+            <button onclick="copyMacro()"
+            style="background:#0f766e;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+            复制
+            </button>
+        </div>
+
+        <div id="macroPanel">
+            <div id="macroLight">刷新宏观信号</div>
+            <div id="macroAdvice"></div>
+            <div id="macroMeta"></div>
+        </div>
+
+        <div id="alertPanel">
+            <div id="alertTitle">宏观预警</div>
+            <div id="alertList">等待数据...</div>
+        </div>
+
+    </div>
+
+    <div id="chart-wrap">
+        <div id="stock-chart-container"></div>
+        <div id="cycle-bar">
+            <div class="cycle-btn" onclick="setCycle('D', this)">日</div>
+            <div class="cycle-btn" onclick="setCycle('W', this)">周</div>
+            <div class="cycle-btn" onclick="setCycle('M', this)">月</div>
+            <div class="cycle-btn" onclick="setRange('ytd', this)">YTD</div>
+            <div class="cycle-btn" onclick="setRange('12m', this)">年</div>
+            <div class="cycle-btn" onclick="setRange('60m', this)">5年</div>
+            <div class="cycle-btn" onclick="setRange('all', this)">全部</div>
+        </div>
+    </div>
+    <div id="translate-panel">
+        <iframe id="translate-frame" src="https://iran.immersivetranslate.com/zh-CN/"></iframe>
+    </div>
+    <div id="news-panel">
+        <iframe id="news-frame" src="https://www.jin10.com/"></iframe>
+    </div>
+</div>
+
+<button id="back-to-quotes" onclick="backToQuotes()">回到报价</button>
+
+<script>
+let widget;
+let currentSymbol = "UKOIL";
+let currentInterval = "D";
+let currentRange = null;
+let quoteObserver = null;
+
+const DATA_SOURCE = {
+    provider: "twelvedata",
+    useProxy: true,
+    proxyUrl: "https://hg-inves20.wubairan.workers.dev",
+    apiKey: "9739029be2174a14a23485c91380abe3"
+};
+
+const MACRO_THRESHOLDS = {
+    copperOilRecovery: 3.0,
+    goldOilStagflation: 20.0,
+    copperOilStagflation: 2.5,
+    copperOilRecession: 2.0,
+    us10yRecovery: 4.5,
+    us10yOverheat: 4.8,
+    us10yFastDrop: 0.10
+};
+
+const quickSymbols = [
+    { label: "USDCNY", symbol: "USDCNY" },
+    { label: "JPYCNY", symbol: "JPYCNY" },
+    { label: "XAUUSD", symbol: "XAUUSD" },
+    { label: "COPPER", symbol: "COPPER" },
+    { label: "UKOIL", symbol: "UKOIL" },
+    { label: "股油比", symbol: "SP500/WTI" },
+    { label: "铜油比", symbol: "COPPER/WTI" },
+    { label: "金油比", symbol: "XAUUSD/WTI" },
+    { label: "US10Y", symbol: "US10Y" },
+    { label: "DXY", symbol: "DXY" },
+    { label: "BTCUSD", symbol: "BTCUSD" },
+    { label: "金币比", symbol: "XAUUSD/BTCUSD" }
+];
+
+const tvSymbolMap = {
+    "XAUUSD": "XAUUSD",
+    "COPPER": "COPPER",
+    "UKOIL": "UKOIL",
+    "SP500/WTI": "SP500/WTI",
+    "COPPER/WTI": "COPPER/WTI",
+    "XAUUSD/WTI": "XAUUSD/WTI",
+    "US10Y": "US10Y",
+    "DXY": "DXY",
+    "BTCUSD": "BTCUSD",
+    "XAUUSD/BTCUSD": "XAUUSD/BTCUSD",
+    "USDCNY": "USDCNY",
+    "JPYCNY": "JPYCNY"
+};
+
+function appendSingleQuoteWidget(container, symbol){
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+        symbol: tvSymbolMap[symbol] || symbol,
+        width: "100%",
+        colorTheme: "light",
+        isTransparent: true,
+        locale: "zh_CN",
+        showSymbolLogo: false,
+        fontSize: "1"
+    });
+    container.appendChild(script);
+}
+
+function renderQuoteGrid(){
+    const grid = document.getElementById("quote-grid");
+    grid.innerHTML = "";
+
+    quickSymbols.forEach(item => {
+        const tile = document.createElement("div");
+        tile.className = "quote-tile";
+        const label = document.createElement("div");
+        label.className = "quote-label";
+        label.textContent = item.label;
+
+        const widgetWrap = document.createElement("div");
+        widgetWrap.className = "tradingview-widget-container";
+        widgetWrap.style.height = "100%";
+        widgetWrap.style.flex = "1";
+
+        const widgetTarget = document.createElement("div");
+        widgetTarget.className = "tradingview-widget-container__widget";
+        widgetTarget.style.height = "100%";
+
+        widgetWrap.appendChild(widgetTarget);
+        widgetWrap.dataset.symbol = item.symbol;
+        widgetWrap.classList.add("lazy-quote");
+
+        const click = document.createElement("div");
+        click.className = "quote-click";
+        click.onclick = () => loadChart(item.symbol);
+
+        tile.appendChild(label);
+        tile.appendChild(widgetWrap);
+        tile.appendChild(click);
+        grid.appendChild(tile);
+    });
+}
+
+function initQuoteObserver(){
+    const lazyQuotes = Array.from(document.querySelectorAll(".lazy-quote"));
+    if (!("IntersectionObserver" in window)){
+        lazyQuotes.forEach(el => {
+            if (!el.dataset.loaded){
+                appendSingleQuoteWidget(el, el.dataset.symbol);
+                el.dataset.loaded = "1";
+            }
+        });
+        return;
+    }
+    if (quoteObserver) quoteObserver.disconnect();
+    quoteObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting){
+                const el = entry.target;
+                if (!el.dataset.loaded){
+                    appendSingleQuoteWidget(el, el.dataset.symbol);
+                    el.dataset.loaded = "1";
+                }
+                quoteObserver.unobserve(el);
+            }
+        });
+    }, { root: null, rootMargin: "100px", threshold: 0.1 });
+
+    lazyQuotes.forEach(el => quoteObserver.observe(el));
+}
+
+function loadChart(symbol){
+    document.getElementById('stock-search').value = symbol;
+    updateStockChart(symbol);
+}
+
+function updateStockChart(symbolInput){
+
+    const symbol = symbolInput ||
+                   document.getElementById('stock-search').value ||
+                   "XAUUSD/UKOIL";
+    currentSymbol = symbol;
+
+    document.getElementById('stock-chart-container').innerHTML = '';
+
+    widget = new TradingView.widget({
+        autosize:true,
+        symbol: tvSymbolMap[symbol] || symbol,
+        interval: currentInterval,
+        range: currentRange || undefined,
+        timezone:"Etc/UTC",
+        theme:"light",
+        style:"1",
+        locale:"zh_CN",
+
+        toolbar_bg:"#f1f3f6",
+        enable_publishing:false,
+
+        hide_top_toolbar:false,
+        hide_side_toolbar:false,
+        hide_legend:false,
+
+        save_image:true,
+
+        container_id:"stock-chart-container",
+        studies:["RSI@tv-basicstudies"]
+    });
+}
+
+function highlightButton(btn){
+    document.querySelectorAll('.cycle-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+
+function setCycle(cycle, btn){
+    currentInterval = cycle;
+    currentRange = null;
+    updateStockChart(currentSymbol);
+    highlightButton(btn);
+}
+
+function setRange(type, btn){
+    if (type === "ytd") currentRange = "YTD";
+    if (type === "12m") currentRange = "12M";
+    if (type === "60m") currentRange = "60M";
+    if (type === "all") currentRange = "ALL";
+    updateStockChart(currentSymbol);
+    highlightButton(btn);
+}
+
+function buildStrategy(cycle, ctx){
+    const copperLine = ctx.copperTrend === "上升"
+        ? "铜油比上升 → 工业需求增强"
+        : ctx.copperTrend === "下降"
+            ? "铜油比下降 → 工业需求走弱"
+            : "铜油比持平 → 需求信号不明";
+
+    const stockLine = ctx.stockTrend === "上升"
+        ? "股油比上升 → 企业利润改善"
+        : ctx.stockTrend === "下降"
+            ? "股油比下降 → 成本压力上升"
+            : "股油比持平 → 利润信号不明";
+
+    const goldLine = ctx.goldTrend === "上升"
+        ? "金油比上升 → 避险/通胀压力"
+        : ctx.goldTrend === "下降"
+            ? "金油比下降 → 风险偏好改善"
+            : "金油比持平 → 风险信号不明";
+
+    if (cycle === "扩张/后期周期"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>建议配置：</div>
+            <ul>
+                <li>SP500 40%</li>
+                <li>原油 30%</li>
+                <li>铜 20%</li>
+                <li>BTC 10%</li>
+            </ul>`;
+    }
+    if (cycle === "中性/后期周期"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>策略：</div>
+            <ul>
+                <li>降低杠杆</li>
+                <li>维持均衡配置</li>
+            </ul>`;
+    }
+    if (cycle === "收缩/滞胀"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>策略：</div>
+            <ul>
+                <li>做多长期国债</li>
+                <li>做多黄金</li>
+                <li>减少股票/周期股</li>
+            </ul>`;
+    }
+    return `
+        <div>${copperLine}</div>
+        <div>${stockLine}</div>
+        <div>${goldLine}</div>
+        <div>策略：</div>
+        <ul>
+            <li>降低杠杆</li>
+            <li>维持均衡配置</li>
+        </ul>`;
+}
+
+function trendLabel(current, ma){
+    if (current == null || ma == null || !Number.isFinite(current) || !Number.isFinite(ma)) return "N/A";
+    const diff = (current - ma) / ma;
+    if (diff > 0.01) return "上升";
+    if (diff < -0.01) return "下降";
+    return "持平";
+}
+
+async function macroCheck(){
+    const metaEl = document.getElementById("macroMeta");
+    metaEl.textContent = "正在获取数据...";
+
+    if (!DATA_SOURCE.proxyUrl){
+        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
+        document.getElementById("macroAdvice").innerHTML = `缺少代理地址，请设置 Worker URL。`;
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        return;
+    }
+
+    const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=macro`);
+    const data = await res.json();
+    if (!data || data.status !== "ok"){
+        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
+        document.getElementById("macroAdvice").innerHTML = data && data.message ? data.message : `请检查代理或数据源。`;
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        return;
+    }
+
+    const {
+        gold, oil, copper, us10y, dxy, btc, sp500,
+        dxyPrev, us10yPrev, sp500Prev,
+        ma90
+    } = data;
+
+    const copperLb = copper / 2204.62262;
+    const goldOil = gold / oil;
+    const copperOil = copperLb / oil;
+    const stockOil = sp500 / oil;
+
+    const goldOilMA = ma90 && ma90.gold && ma90.oil ? (ma90.gold / ma90.oil) : null;
+    const copperOilMA = ma90 && ma90.copper && ma90.oil ? ((ma90.copper / 2204.62262) / ma90.oil) : null;
+    const stockOilMA = ma90 && ma90.sp500 && ma90.oil ? (ma90.sp500 / ma90.oil) : null;
+
+    const goldOilTrend = trendLabel(goldOil, goldOilMA);
+    const copperOilTrend = trendLabel(copperOil, copperOilMA);
+    const stockOilTrend = trendLabel(stockOil, stockOilMA);
+    const us10yTrend = trendLabel(us10y, ma90 && ma90.us10y ? ma90.us10y : null);
+    const dxyTrend = trendLabel(dxy, ma90 && ma90.dxy ? ma90.dxy : null);
+
+    const dxyDown = dxyPrev !== null ? dxy < dxyPrev : false;
+    const us10yDown = us10yPrev !== null ? us10y < us10yPrev : false;
+
+    let score = 0;
+    if (copperOilTrend === "上升") score += 2;
+    if (stockOilTrend === "上升") score += 1;
+    if (goldOilTrend === "上升") score -= 1;
+    if (us10yTrend === "下降" || us10yDown) score += 1;
+    if (dxyTrend === "下降" || dxyDown) score += 1;
+
+    let cycle = "中性";
+    let signalClass = "yellow";
+
+    if (score >= 3){
+        cycle = "扩张/后期周期";
+        signalClass = "green";
+    } else if (score <= 0){
+        cycle = "收缩/滞胀";
+        signalClass = "red";
+    } else {
+        cycle = "中性/后期周期";
+        signalClass = "yellow";
+    }
+
+    document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${cycle}（评分 ${score}）`;
+    document.getElementById("macroAdvice").innerHTML = `
+        <div><strong>当前宏观周期：</strong>${cycle}</div>
+        <div><strong>关键指标：</strong></div>
+        <ul>
+            <li>金油比：${goldOil.toFixed(2)}</li>
+            <li>铜油比：${copperOil.toFixed(3)}</li>
+            <li>股油比：${stockOil.toFixed(2)}</li>
+            <li>10Y：${us10y.toFixed(2)}</li>
+            <li>DXY (Trade-Weighted)：${dxy.toFixed(2)}</li>
+            <li>BTC：${btc ? btc.toFixed(2) : "N/A"}</li>
+            <li>SP500：${sp500 ? sp500.toFixed(2) : "N/A"}</li>
+        </ul>
+        <div><strong>90日趋势：</strong></div>
+        <ul>
+            <li>金油比：${goldOilTrend}（MA90 ${goldOilMA ? goldOilMA.toFixed(2) : "N/A"}）</li>
+            <li>铜油比：${copperOilTrend}（MA90 ${copperOilMA ? copperOilMA.toFixed(3) : "N/A"}）</li>
+            <li>股油比：${stockOilTrend}（MA90 ${stockOilMA ? stockOilMA.toFixed(2) : "N/A"}）</li>
+            <li>10Y：${us10yTrend}（MA90 ${ma90 && ma90.us10y ? ma90.us10y.toFixed(2) : "N/A"}）</li>
+            <li>DXY：${dxyTrend}（MA90 ${ma90 && ma90.dxy ? ma90.dxy.toFixed(2) : "N/A"}）</li>
+        </ul>
+        <div><strong>AI策略提示：</strong></div>
+        ${buildStrategy(cycle, {
+            goldTrend: goldOilTrend,
+            copperTrend: copperOilTrend,
+            stockTrend: stockOilTrend
+        })}
+        <div style="margin-top:8px;font-size:11px;color:#555;">
+            数据口径：铜 USD/ton → USD/lb；油 USD/barrel；DXY 为贸易加权指数（FRED）。
+        </div>
+    `;
+
+    metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+}
+
+async function fetchAlerts(){
+    const listEl = document.getElementById("alertList");
+    listEl.textContent = "正在获取预警...";
+    try{
+        const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=alerts`);
+        const data = await res.json();
+        if (!data || data.status !== "ok"){
+            listEl.textContent = data && data.message ? data.message : "预警数据不可用";
+            return;
+        }
+
+        const marketItems = (data.marketAlerts || []).map(a =>
+            `<li><span class="alert-tag">市场</span>${a}</li>`
+        ).join("");
+
+        const newsItems = (data.newsAlerts || []).map(a =>
+            `<li><span class="alert-tag">事件</span>${a}</li>`
+        ).join("");
+
+        const marketBlock = marketItems
+            ? `<div><strong>市场异常</strong><ul>${marketItems}</ul></div>`
+            : `<div><strong>市场异常</strong><div>无</div></div>`;
+
+        const newsBlock = newsItems
+            ? `<div style="margin-top:6px;"><strong>宏观事件</strong><ul>${newsItems}</ul></div>`
+            : `<div style="margin-top:6px;"><strong>宏观事件</strong><div>无</div></div>`;
+
+        const summary = data.summary ? `<div class="alert-meta">${data.summary}</div>` : "";
+
+        listEl.innerHTML = `${marketBlock}${newsBlock}${summary}`;
+    }catch(err){
+        listEl.textContent = "预警数据获取失败";
+    }
+}
+
+function backToQuotes(){
+    document.getElementById("translate-panel").style.display = "none";
+    document.getElementById("news-panel").style.display = "none";
+    document.getElementById("chart-wrap").style.display = "block";
+    document.getElementById("cycle-bar").style.display = "flex";
+    document.getElementById("back-to-quotes").style.display = "none";
+    updateStockChart();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function toggleMacroPanel(){
+    const panel = document.getElementById("macroPanel");
+    const btn = event && event.currentTarget ? event.currentTarget : null;
+    const collapsed = panel.classList.toggle("collapsed");
+    if (btn) btn.textContent = collapsed ? "展开" : "收起";
+}
+
+async function copyMacro(){
+    const light = document.getElementById("macroLight");
+    const advice = document.getElementById("macroAdvice");
+    const meta = document.getElementById("macroMeta");
+    const text = [
+        "宏观AI策略",
+        light ? light.textContent.trim() : "",
+        advice ? advice.textContent.trim() : "",
+        meta ? meta.textContent.trim() : ""
+    ].filter(Boolean).join("\n");
+    try{
+        await navigator.clipboard.writeText(text);
+        alert("已复制宏观AI策略");
+    }catch(err){
+        alert("复制失败，请检查浏览器权限");
+    }
+}
+
+
+function toggleTranslate(){
+    const panel = document.getElementById("translate-panel");
+    const showing = panel.style.display !== "none";
+    if (showing) {
+        backToQuotes();
+        return;
+    }
+    panel.style.display = "block";
+    document.getElementById("news-panel").style.display = "none";
+    document.getElementById("chart-wrap").style.display = "none";
+    document.getElementById("cycle-bar").style.display = "none";
+    document.getElementById("back-to-quotes").style.display = "block";
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function toggleNews(){
+    const panel = document.getElementById("news-panel");
+    const showing = panel.style.display !== "none";
+    if (showing) {
+        backToQuotes();
+        return;
+    }
+    panel.style.display = "block";
+    document.getElementById("translate-panel").style.display = "none";
+    document.getElementById("chart-wrap").style.display = "none";
+    document.getElementById("cycle-bar").style.display = "none";
+    document.getElementById("back-to-quotes").style.display = "block";
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+window.onload = function(){
+    renderQuoteGrid();
+    initQuoteObserver();
+    loadChart("UKOIL");
+    macroCheck();
+    setInterval(macroCheck, 60000);
+    fetchAlerts();
+    setInterval(fetchAlerts, 300000);
+};
+</script>
+
+</body>
+</html>
