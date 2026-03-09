@@ -940,10 +940,15 @@ async function macroCheck(){
     const stockOil = sp500 / oil;
 
     const goldOilMA = ma90 && ma90.gold && ma90.oil ? (ma90.gold / ma90.oil) : null;
+    const goldOilMAEst = (goldOilMA == null && ma90 && ma90.oil && gold) ? (gold / ma90.oil) : null;
+    const goldOilMAToUse = goldOilMA != null ? goldOilMA : goldOilMAEst;
+    const goldOilMALabel = goldOilMA != null
+        ? goldOilMA.toFixed(2)
+        : (goldOilMAEst != null ? `估算 ${goldOilMAEst.toFixed(2)}` : "N/A");
     const copperOilMA = ma90 && ma90.copper && ma90.oil ? ((ma90.copper / 2204.62262) / ma90.oil) : null;
     const stockOilMA = ma90 && ma90.sp500 && ma90.oil ? (ma90.sp500 / ma90.oil) : null;
 
-    const goldOilTrend = trendLabel(goldOil, goldOilMA);
+    const goldOilTrend = trendLabel(goldOil, goldOilMAToUse);
     const copperOilTrend = trendLabel(copperOil, copperOilMA);
     const stockOilTrend = trendLabel(stockOil, stockOilMA);
     const oilTrend = trendLabel(oil, ma90 && ma90.oil ? ma90.oil : null);
@@ -1058,7 +1063,7 @@ async function macroCheck(){
         </ul>
         <div><strong>90日趋势：</strong></div>
         <ul>
-            <li>金油比：${goldOilTrend}（MA90 ${goldOilMA ? goldOilMA.toFixed(2) : "N/A"}）</li>
+            <li>金油比：${goldOilTrend}（MA90 ${goldOilMALabel}）</li>
             <li>铜油比：${copperOilTrend}（MA90 ${copperOilMA ? copperOilMA.toFixed(3) : "N/A"}）</li>
             <li>股油比：${stockOilTrend}（MA90 ${stockOilMA ? stockOilMA.toFixed(2) : "N/A"}）</li>
             <li>10Y：${us10yTrend}（MA90 ${ma90 && ma90.us10y ? ma90.us10y.toFixed(2) : "N/A"}）</li>
