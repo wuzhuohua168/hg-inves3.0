@@ -716,6 +716,75 @@ function buildStrategy(stage, ctx){
         </ul>`;
 }
 
+function buildChinaAllocation(stage, liquidityState){
+    const liqNote = liquidityState ? `（流动性：${liquidityState}）` : "";
+    if (stage === "复苏"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>周期股</li>
+                <li>有色</li>
+                <li>机械</li>
+                <li>券商</li>
+            </ul>`;
+    }
+    if (stage === "扩张"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>新能源</li>
+                <li>科技成长</li>
+                <li>消费升级</li>
+            </ul>`;
+    }
+    if (stage.indexOf("扩张后期") === 0){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>能源</li>
+                <li>煤炭</li>
+                <li>油气</li>
+                <li>高股息央企</li>
+            </ul>`;
+    }
+    if (stage === "滞胀"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>资源股</li>
+                <li>黄金</li>
+                <li>防御股</li>
+            </ul>`;
+    }
+    if (stage === "衰退"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>医药</li>
+                <li>高股息</li>
+                <li>现金</li>
+            </ul>`;
+    }
+    return `
+        <div><strong>A股配置建议${liqNote}：</strong></div>
+        <ul>
+            <li>均衡配置</li>
+        </ul>`;
+}
+
+function buildTurningPoints(flags){
+    const lines = [];
+    if (flags.stagflationTurn) lines.push("滞胀拐点：油价上行+铜走弱+通胀预期抬升");
+    if (flags.recessionTurn) lines.push("衰退拐点：铜油比下行+信用/波动上升");
+    if (flags.commodityTop) lines.push("大宗周期顶：油高位+铜转弱+美元走强");
+    if (!lines.length) lines.push("暂无明确拐点信号");
+    return `
+        <div><strong>拐点提示：</strong></div>
+        <ul>
+            ${lines.map(l => `<li>${l}</li>`).join("")}
+        </ul>`;
+}
+
 function buildEventImpact(){
     const alertData = window.__alertData || {};
     const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
@@ -812,6 +881,7 @@ async function macroCheck(){
         t5y5y, real10y, walcl,
         dxyPrev, us10yPrev, sp500Prev,
         vix, vixPrev, hy, hyPrev,
+        cnM2, cnM2Prev, cnTSF, cnTSFPrev,
         ma90
     } = data;
 
@@ -833,6 +903,16 @@ async function macroCheck(){
     const t5y5yTrend = trendLabel(t5y5y, ma90 && ma90.t5y5y ? ma90.t5y5y : null);
     const real10yTrend = trendLabel(real10y, ma90 && ma90.real10y ? ma90.real10y : null);
     const walclTrend = trendLabel(walcl, ma90 && ma90.walcl ? ma90.walcl : null);
+
+    const cnM2Trend = (cnM2 != null && cnM2Prev != null)
+        ? (cnM2 > cnM2Prev ? "上升" : cnM2 < cnM2Prev ? "下降" : "持平")
+        : "N/A";
+    const cnTSFTrend = (cnTSF != null && cnTSFPrev != null)
+        ? (cnTSF > cnTSFPrev ? "上升" : cnTSF < cnTSFPrev ? "下降" : "持平")
+        : "N/A";
+    const chinaLiquidityState =
+        (cnM2Trend === "上升" && cnTSFTrend === "上升") ? "宽松" :
+        (cnM2Trend === "下降" && cnTSFTrend === "下降") ? "收紧" : "中性";
 
     const dxyDown = dxyPrev !== null ? dxy < dxyPrev : false;
     const us10yDown = us10yPrev !== null ? us10y < us10yPrev : false;
@@ -918,6 +998,8 @@ async function macroCheck(){
             <li>通胀预期(5Y5Y)：${t5y5y ? t5y5y.toFixed(2) : "N/A"}</li>
             <li>10Y 实际利率：${real10y ? real10y.toFixed(2) : "N/A"}</li>
             <li>美联储资产负债表：${walcl ? walcl.toFixed(0) : "N/A"}</li>
+            <li>中国M2：${cnM2 != null ? cnM2.toFixed(0) : "N/A"}</li>
+            <li>中国社融：${cnTSF != null ? cnTSF.toFixed(0) : "N/A"}</li>
         </ul>
         <div><strong>90日趋势：</strong></div>
         <ul>
@@ -929,6 +1011,8 @@ async function macroCheck(){
             <li>5Y5Y：${t5y5yTrend}（MA90 ${ma90 && ma90.t5y5y ? ma90.t5y5y.toFixed(2) : "N/A"}）</li>
             <li>10Y 实际利率：${real10yTrend}（MA90 ${ma90 && ma90.real10y ? ma90.real10y.toFixed(2) : "N/A"}）</li>
             <li>WALCL：${walclTrend}（MA90 ${ma90 && ma90.walcl ? ma90.walcl.toFixed(0) : "N/A"}）</li>
+            <li>中国M2：${cnM2Trend}</li>
+            <li>中国社融：${cnTSFTrend}</li>
         </ul>
         <div><strong>宏观结构：</strong></div>
         <ul>
@@ -936,6 +1020,7 @@ async function macroCheck(){
             <li>通胀：${inflationState}</li>
             <li>流动性：${liquidityState}</li>
             <li>风险：${riskState}</li>
+            <li>中国流动性：${chinaLiquidityState}</li>
         </ul>
         <div><strong>宏观总结：</strong>${macroSummary}</div>
         <div><strong>AI策略提示：</strong></div>
@@ -945,6 +1030,12 @@ async function macroCheck(){
             stockTrend: stockOilTrend,
             vix: vix,
             hy: hy
+        })}
+        ${buildChinaAllocation(stage, chinaLiquidityState)}
+        ${buildTurningPoints({
+            stagflationTurn: oilTrend === "上升" && copperOilTrend === "下降" && t5y5yTrend === "上升" && stockOilTrend === "下降",
+            recessionTurn: copperOilTrend === "下降" && ((hy != null && hy > 4) || (vix != null && vix > 25)),
+            commodityTop: oilTrend === "上升" && copperOilTrend === "下降" && dxyTrend === "上升"
         })}
         ${buildEventImpact()}
         ${buildConsistencyCheck(stage, {
