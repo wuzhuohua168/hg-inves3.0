@@ -809,6 +809,7 @@ async function macroCheck(){
 
     const {
         gold, oil, copper, us10y, dxy, btc, sp500,
+        t5y5y, real10y, walcl,
         dxyPrev, us10yPrev, sp500Prev,
         vix, vixPrev, hy, hyPrev,
         ma90
@@ -829,6 +830,9 @@ async function macroCheck(){
     const oilTrend = trendLabel(oil, ma90 && ma90.oil ? ma90.oil : null);
     const us10yTrend = trendLabel(us10y, ma90 && ma90.us10y ? ma90.us10y : null);
     const dxyTrend = trendLabel(dxy, ma90 && ma90.dxy ? ma90.dxy : null);
+    const t5y5yTrend = trendLabel(t5y5y, ma90 && ma90.t5y5y ? ma90.t5y5y : null);
+    const real10yTrend = trendLabel(real10y, ma90 && ma90.real10y ? ma90.real10y : null);
+    const walclTrend = trendLabel(walcl, ma90 && ma90.walcl ? ma90.walcl : null);
 
     const dxyDown = dxyPrev !== null ? dxy < dxyPrev : false;
     const us10yDown = us10yPrev !== null ? us10y < us10yPrev : false;
@@ -887,6 +891,16 @@ async function macroCheck(){
         signalClass = "yellow";
     }
 
+    const growthState = (copperOilTrend === "上升" || stockOilTrend === "上升") ? "偏强" :
+        (copperOilTrend === "下降" && stockOilTrend === "下降") ? "偏弱" : "中性";
+    const inflationState = (t5y5yTrend === "上升" || goldOilTrend === "上升") ? "上升" :
+        (t5y5yTrend === "下降" && goldOilTrend === "下降") ? "下降" : "中性";
+    const liquidityState = walclTrend === "上升" ? "宽松" :
+        walclTrend === "下降" ? "收紧" : "中性";
+    const riskState = (vix != null && vix > 25) || (hy != null && hy > 4) ? "上升" : "温和";
+
+    const macroSummary = `增长${growthState}，通胀${inflationState}，流动性${liquidityState}，风险${riskState}。`;
+
     document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score}）`;
     document.getElementById("macroAdvice").innerHTML = `
         <div><strong>宏观状态：</strong>${stage}</div>
@@ -901,6 +915,9 @@ async function macroCheck(){
             <li>SP500：${sp500 ? sp500.toFixed(2) : "N/A"}</li>
             <li>VIX：${vix ? vix.toFixed(2) : "N/A"}</li>
             <li>HY利差：${hy ? hy.toFixed(2) : "N/A"}</li>
+            <li>通胀预期(5Y5Y)：${t5y5y ? t5y5y.toFixed(2) : "N/A"}</li>
+            <li>10Y 实际利率：${real10y ? real10y.toFixed(2) : "N/A"}</li>
+            <li>美联储资产负债表：${walcl ? walcl.toFixed(0) : "N/A"}</li>
         </ul>
         <div><strong>90日趋势：</strong></div>
         <ul>
@@ -909,7 +926,18 @@ async function macroCheck(){
             <li>股油比：${stockOilTrend}（MA90 ${stockOilMA ? stockOilMA.toFixed(2) : "N/A"}）</li>
             <li>10Y：${us10yTrend}（MA90 ${ma90 && ma90.us10y ? ma90.us10y.toFixed(2) : "N/A"}）</li>
             <li>DXY：${dxyTrend}（MA90 ${ma90 && ma90.dxy ? ma90.dxy.toFixed(2) : "N/A"}）</li>
+            <li>5Y5Y：${t5y5yTrend}（MA90 ${ma90 && ma90.t5y5y ? ma90.t5y5y.toFixed(2) : "N/A"}）</li>
+            <li>10Y 实际利率：${real10yTrend}（MA90 ${ma90 && ma90.real10y ? ma90.real10y.toFixed(2) : "N/A"}）</li>
+            <li>WALCL：${walclTrend}（MA90 ${ma90 && ma90.walcl ? ma90.walcl.toFixed(0) : "N/A"}）</li>
         </ul>
+        <div><strong>宏观结构：</strong></div>
+        <ul>
+            <li>增长：${growthState}</li>
+            <li>通胀：${inflationState}</li>
+            <li>流动性：${liquidityState}</li>
+            <li>风险：${riskState}</li>
+        </ul>
+        <div><strong>宏观总结：</strong>${macroSummary}</div>
         <div><strong>AI策略提示：</strong></div>
         ${buildStrategy(stage, {
             goldTrend: goldOilTrend,
