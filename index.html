@@ -816,6 +816,9 @@ function buildOilStressModule(oilStress){
     const spread = oilStress.spread != null ? oilStress.spread.toFixed(2) : "N/A";
     const wtiThreshold = oilStress.wtiThreshold != null ? oilStress.wtiThreshold.toFixed(2) : "N/A";
     const days = oilStress.brentAbove115Days != null ? oilStress.brentAbove115Days : "N/A";
+    const wtiT90 = (oilStress.spread != null) ? (90 - oilStress.spread).toFixed(2) : "N/A";
+    const wtiT100 = (oilStress.spread != null) ? (100 - oilStress.spread).toFixed(2) : "N/A";
+    const wtiT115 = (oilStress.spread != null) ? (115 - oilStress.spread).toFixed(2) : "N/A";
 
     let explain = "油价中性，通胀压力有限。";
     if (level === 1) explain = "油价进入通胀压力区，能源成本推高CPI。";
@@ -824,10 +827,11 @@ function buildOilStressModule(oilStress){
 
     return `
         <div><strong>能源压力等级：</strong>${level}</div>
-        <div>Brent：${brent}｜WTI：${wti}｜Spread：${spread}</div>
-        <div>WTI阈值估算：${wtiThreshold}</div>
+        <div>Brent（EIA spot）：${brent}｜WTI：${wti}｜Spread：${spread}</div>
+        <div>WTI阈值估算：90→${wtiT90} / 100→${wtiT100} / 115→${wtiT115}</div>
         <div>Brent≥115天数：${days}</div>
-        <div>${explain}</div>`;
+        <div>${explain}</div>
+        <div style="font-size:11px;color:#6b7280;">期货价格仅作行情参考，不参与宏观评分。</div>`;
 }
 
 function buildEventImpact(){
