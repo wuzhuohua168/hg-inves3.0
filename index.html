@@ -168,6 +168,14 @@ input{
     font-size:12px;
     color:#3f3f46;
 }
+#alertList .alert-title-en{
+    font-size:12px;
+    color:#111827;
+}
+#alertList .alert-title-cn{
+    font-size:12px;
+    color:#2563eb;
+}
 #alertList ul{
     margin:6px 0 0 16px;
     padding:0;
@@ -868,7 +876,13 @@ async function macroCheck(){
         stage = "衰退";
         signalClass = "red";
     }
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const oilShockAlert = marketAlerts.some(a => a.indexOf("油价24h上涨") !== -1);
     if (score <= -1 && copperOilTrend === "上升" && oilTrend === "上升"){
+        stage = "扩张后期（通胀冲击）";
+        signalClass = "yellow";
+    } else if (oilShockAlert && copperOilTrend === "上升"){
         stage = "扩张后期（通胀冲击）";
         signalClass = "yellow";
     }
@@ -930,19 +944,67 @@ async function fetchAlerts(){
             return;
         }
 
-        const marketItems = (data.marketAlerts || []).map(a =>
-            `<li><span class="alert-tag">市场</span>${a}</li>`
-        ).join("");
+        const translateNewsTitle = (title) => {
+            if (!title) return "";
+            let t = title;
+            const map = [
+                [/war|conflict|clash|tensions/ig, "战争/冲突"],
+                [/oil|crude|energy/ig, "油价/能源"],
+                [/inflation/ig, "通胀"],
+                [/rate hike|rates|yields|bond/ig, "利率/收益率"],
+                [/stocks|equities|shares|index/ig, "股市/指数"],
+                [/gold/ig, "黄金"],
+                [/dollar|usd|dxy/ig, "美元/美元指数"],
+                [/recession/ig, "衰退"],
+                [/risk/ig, "风险"]
+            ];
+            const original = t;
+            map.forEach(([re, cn]) => {
+                t = t.replace(re, cn);
+            });
+            if (t === original) return "（无直译，保留英文原文）";
+            return t;
+        };
+
+        const translateMarketAlert = (text) => {
+            if (!text) return "";
+            const m = text.match(/油价24h上涨([0-9.]+)%/);
+            if (m) return `Oil +${m[1]}% in 24h → energy shock risk`;
+            return "Market alert";
+        };
+
+        const marketItems = (data.marketAlerts || []).map(a => {
+            const en = translateMarketAlert(a);
+            return `
+                <li>
+                    <span class="alert-tag">市场</span>
+                    <div class="alert-title-cn">CN: ${a}</div>
+                    <div class="alert-title-en">EN: ${en}</div>
+                </li>`;
+        }).join("");
 
         const newsItems = (data.newsAlerts || []).map(a => {
             if (typeof a === "string"){
-                return `<li><span class="alert-tag">事件</span>${a}</li>`;
+                const cn = translateNewsTitle(a);
+                return `
+                    <li>
+                        <span class="alert-tag">事件</span>
+                        <div class="alert-title-en">EN: ${a}</div>
+                        <div class="alert-title-cn">CN: ${cn}</div>
+                    </li>`;
             }
             const title = a.title || "";
+            const translated = a.translated || "";
             const link = a.link || "";
             const tag = a.tag || "事件";
             const safeLink = link ? `<a href="${link}" target="_blank" rel="noopener">来源</a>` : "";
-            return `<li><span class="alert-tag">${tag}</span>${title} ${safeLink}</li>`;
+            const cn = translated || translateNewsTitle(title);
+            return `
+                <li>
+                    <span class="alert-tag">${tag}</span>
+                    <div class="alert-title-en">EN: ${title} ${safeLink}</div>
+                    <div class="alert-title-cn">CN: ${cn}</div>
+                </li>`;
         }).join("");
 
         const marketBlock = marketItems
