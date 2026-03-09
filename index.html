@@ -339,11 +339,11 @@ input{
             <div id="macroLight">刷新宏观信号</div>
             <div id="macroAdvice"></div>
             <div id="macroMeta"></div>
-        </div>
 
-        <div id="alertPanel">
-            <div id="alertTitle">宏观预警</div>
-            <div id="alertList">等待数据...</div>
+            <div id="alertPanel">
+                <div id="alertTitle">宏观预警</div>
+                <div id="alertList">等待数据...</div>
+            </div>
         </div>
 
     </div>
@@ -828,8 +828,13 @@ async function macroCheck(){
     const hyUp = hyPrev !== null ? hy > hyPrev : false;
 
     let score = 0;
-    if (copperOilTrend === "上升") score += 2;
-    if (copperOilTrend === "下降") score -= 1;
+    let copperScore = 0;
+    if (copperOilTrend === "上升") copperScore = 2;
+    if (copperOilTrend === "下降") copperScore = -1;
+    if (ma90 && ma90.oil && oil > ma90.oil * 1.10 && copperScore > 0){
+        copperScore = 1;
+    }
+    score += copperScore;
     if (stockOilTrend === "上升") score += 1;
     if (goldOilTrend === "上升") score -= 1;
     if (us10yTrend === "下降" || us10yDown) score += 1;
@@ -862,6 +867,10 @@ async function macroCheck(){
     } else {
         stage = "衰退";
         signalClass = "red";
+    }
+    if (score <= -1 && copperOilTrend === "上升" && oilTrend === "上升"){
+        stage = "扩张后期（通胀冲击）";
+        signalClass = "yellow";
     }
 
     document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score}）`;
