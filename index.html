@@ -785,6 +785,51 @@ function buildTurningPoints(flags){
         </ul>`;
 }
 
+function buildOilStressChina(oilStress){
+    if (!oilStress || oilStress.level == null) return "";
+    if (oilStress.level === 2){
+        return `
+            <div><strong>油价冲击配置：</strong></div>
+            <ul>
+                <li>增加：能源、煤炭、资源股</li>
+                <li>减少：高估值成长</li>
+            </ul>`;
+    }
+    if (oilStress.level === 3){
+        return `
+            <div><strong>油价冲击配置：</strong></div>
+            <ul>
+                <li>降低风险资产</li>
+                <li>增加：黄金、高股息央企、现金</li>
+            </ul>`;
+    }
+    return "";
+}
+
+function buildOilStressModule(oilStress){
+    if (!oilStress || oilStress.level == null){
+        return `<div><strong>能源压力等级：</strong>N/A</div>`;
+    }
+    const level = oilStress.level;
+    const brent = oilStress.brent != null ? oilStress.brent.toFixed(2) : "N/A";
+    const wti = oilStress.wti != null ? oilStress.wti.toFixed(2) : "N/A";
+    const spread = oilStress.spread != null ? oilStress.spread.toFixed(2) : "N/A";
+    const wtiThreshold = oilStress.wtiThreshold != null ? oilStress.wtiThreshold.toFixed(2) : "N/A";
+    const days = oilStress.brentAbove115Days != null ? oilStress.brentAbove115Days : "N/A";
+
+    let explain = "油价中性，通胀压力有限。";
+    if (level === 1) explain = "油价进入通胀压力区，能源成本推高CPI。";
+    if (level === 2) explain = "油价进入增长压制区，企业利润承压。";
+    if (level === 3) explain = "油价进入需求破坏区，滞胀风险上升。";
+
+    return `
+        <div><strong>能源压力等级：</strong>${level}</div>
+        <div>Brent：${brent}｜WTI：${wti}｜Spread：${spread}</div>
+        <div>WTI阈值估算：${wtiThreshold}</div>
+        <div>Brent≥115天数：${days}</div>
+        <div>${explain}</div>`;
+}
+
 function buildEventImpact(){
     const alertData = window.__alertData || {};
     const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
@@ -877,7 +922,7 @@ async function macroCheck(){
     }
 
     const {
-        gold, oil, copper, us10y, dxy, btc, sp500,
+        gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
         t5y5y, real10y, walcl,
         dxyPrev, us10yPrev, sp500Prev,
         vix, vixPrev, hy, hyPrev,
@@ -939,6 +984,11 @@ async function macroCheck(){
         if (hy > 6) score -= 2;
         else if (hy > 4 || hyUp) score -= 1;
     }
+    if (oilStress && oilStress.level != null){
+        if (oilStress.level === 1) score -= 0.5;
+        if (oilStress.level === 2) score -= 1;
+        if (oilStress.level === 3) score -= 2;
+    }
     score += getEventScore();
 
     let stage = "扩张后期";
@@ -981,7 +1031,7 @@ async function macroCheck(){
 
     const macroSummary = `增长${growthState}，通胀${inflationState}，流动性${liquidityState}，风险${riskState}。`;
 
-    document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score}）`;
+    document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score.toFixed(1)}）`;
     document.getElementById("macroAdvice").innerHTML = `
         <div><strong>宏观状态：</strong>${stage}</div>
         <div><strong>关键指标：</strong></div>
@@ -991,6 +1041,7 @@ async function macroCheck(){
             <li>股油比：${stockOil.toFixed(2)}</li>
             <li>10Y：${us10y.toFixed(2)}</li>
             <li>DXY (Trade-Weighted)：${dxy.toFixed(2)}</li>
+            <li>Brent：${brent != null ? brent.toFixed(2) : "N/A"}</li>
             <li>BTC：${btc ? btc.toFixed(2) : "N/A"}</li>
             <li>SP500：${sp500 ? sp500.toFixed(2) : "N/A"}</li>
             <li>VIX：${vix ? vix.toFixed(2) : "N/A"}</li>
@@ -1023,6 +1074,7 @@ async function macroCheck(){
             <li>中国流动性：${chinaLiquidityState}</li>
         </ul>
         <div><strong>宏观总结：</strong>${macroSummary}</div>
+        ${buildOilStressModule(oilStress)}
         <div><strong>AI策略提示：</strong></div>
         ${buildStrategy(stage, {
             goldTrend: goldOilTrend,
@@ -1032,6 +1084,7 @@ async function macroCheck(){
             hy: hy
         })}
         ${buildChinaAllocation(stage, chinaLiquidityState)}
+        ${buildOilStressChina(oilStress)}
         ${buildTurningPoints({
             stagflationTurn: oilTrend === "上升" && copperOilTrend === "下降" && t5y5yTrend === "上升" && stockOilTrend === "下降",
             recessionTurn: copperOilTrend === "下降" && ((hy != null && hy > 4) || (vix != null && vix > 25)),
