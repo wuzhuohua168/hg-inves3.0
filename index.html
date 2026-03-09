@@ -582,11 +582,29 @@ function buildStrategy(cycle, ctx){
             ? "金油比下降 → 风险偏好改善"
             : "金油比持平 → 风险信号不明";
 
+    const vixLine = ctx.vix == null
+        ? "VIX 无数据"
+        : ctx.vix > 35
+            ? "VIX 高位 → 恐慌阶段"
+            : ctx.vix > 25
+                ? "VIX 上升 → 风险情绪偏高"
+                : "VIX 稳定 → 风险情绪温和";
+
+    const hyLine = ctx.hy == null
+        ? "HY 利差无数据"
+        : ctx.hy > 7
+            ? "HY 利差高位 → 金融风险上升"
+            : ctx.hy > 5
+                ? "HY 利差扩大 → 信用压力增加"
+                : "HY 利差稳定 → 金融压力有限";
+
     if (cycle === "扩张/后期周期"){
         return `
             <div>${copperLine}</div>
             <div>${stockLine}</div>
             <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
             <div>建议配置：</div>
             <ul>
                 <li>SP500 40%</li>
@@ -601,6 +619,8 @@ function buildStrategy(cycle, ctx){
             <div>${copperLine}</div>
             <div>${stockLine}</div>
             <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
             <div>策略：</div>
             <ul>
                 <li>降低杠杆</li>
@@ -612,6 +632,8 @@ function buildStrategy(cycle, ctx){
             <div>${copperLine}</div>
             <div>${stockLine}</div>
             <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
             <div>策略：</div>
             <ul>
                 <li>做多长期国债</li>
@@ -623,6 +645,8 @@ function buildStrategy(cycle, ctx){
         <div>${copperLine}</div>
         <div>${stockLine}</div>
         <div>${goldLine}</div>
+        <div>${vixLine}</div>
+        <div>${hyLine}</div>
         <div>策略：</div>
         <ul>
             <li>降低杠杆</li>
@@ -735,7 +759,9 @@ async function macroCheck(){
         ${buildStrategy(cycle, {
             goldTrend: goldOilTrend,
             copperTrend: copperOilTrend,
-            stockTrend: stockOilTrend
+            stockTrend: stockOilTrend,
+            vix: vix,
+            hy: hy
         })}
         <div style="margin-top:8px;font-size:11px;color:#555;">
             数据口径：铜 USD/ton → USD/lb；油 USD/barrel；DXY 为贸易加权指数（FRED）。
