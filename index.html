@@ -25,6 +25,9 @@ body{
     flex-direction:column;
     overflow:auto;
 }
+body.draw-mode{
+    overflow:hidden;
+}
 
 .main{
     flex:1;
@@ -382,6 +385,10 @@ input{
             <button onclick="copyMacro()"
             style="background:#0f766e;color:#fff;border:none;padding:0 10px;border-radius:8px;">
             复制
+            </button>
+            <button id="drawToggleBtn" onclick="toggleDrawMode()"
+            style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+            draw
             </button>
         </div>
 
@@ -882,6 +889,9 @@ function buildOilStressModule(oilStress){
         <div><strong>能源压力等级：</strong>${level}</div>
         <div>Brent（EIA spot）：${brent}｜WTI：${wti}｜Spread：${spread}</div>
         <div>WTI阈值估算：90→${wtiT90} / 100→${wtiT100} / 115→${wtiT115}</div>
+        <div style="font-size:11px;color:#6b7280;">
+            含义：WTI≥${wtiT90} → 通胀压力区；≥${wtiT100} → 增长压制区；≥${wtiT115} → 需求破坏风险区
+        </div>
         <div>Brent≥115天数：${days}</div>
         <div>${explain}</div>
         <div style="font-size:11px;color:#6b7280;">期货价格仅作行情参考，不参与宏观评分。</div>`;
@@ -1333,6 +1343,13 @@ function toggleMacroPanel(evt){
     const btn = evt && evt.currentTarget ? evt.currentTarget : document.getElementById("macroToggleBtn");
     const collapsed = panel.classList.toggle("collapsed");
     if (btn) btn.textContent = collapsed ? "展开" : "收起";
+}
+
+function toggleDrawMode(){
+    const body = document.body;
+    const btn = document.getElementById("drawToggleBtn");
+    const enabled = body.classList.toggle("draw-mode");
+    if (btn) btn.textContent = enabled ? "draw on" : "draw";
 }
 
 function initMacroToggleButton(){
