@@ -867,7 +867,7 @@ function buildOilStressChina(oilStress){
     return "";
 }
 
-function buildOilStressModule(oilStress){
+function buildOilStressModule(oilStress, oilDate, brentDate, brentFut, brentFutDate){
     if (!oilStress || oilStress.level == null){
         return `<div><strong>能源压力等级：</strong>N/A</div>`;
     }
@@ -887,10 +887,16 @@ function buildOilStressModule(oilStress){
 
     return `
         <div><strong>能源压力等级：</strong>${level}</div>
-        <div>Brent（EIA spot）：${brent}｜WTI：${wti}｜Spread：${spread}</div>
+        <div>Brent（EIA spot）：${brent}${brentDate ? `（${brentDate}）` : ""}｜WTI：${wti}${oilDate ? `（${oilDate}）` : ""}｜Spread：${spread}</div>
+        <div style="font-size:11px;color:#6b7280;">提示：Brent=全球基准油价（宏观），WTI=交易参考（盘面）。</div>
         <div>WTI阈值估算：90→${wtiT90} / 100→${wtiT100} / 115→${wtiT115}</div>
         <div style="font-size:11px;color:#6b7280;">
-            含义：WTI≥${wtiT90} → 通胀压力区；≥${wtiT100} → 增长压制区；≥${wtiT115} → 需求破坏风险区
+            含义：当 WTI≥${wtiT90}，相当于 Brent≈90（通胀压力区）；<br>
+            当 WTI≥${wtiT100}，相当于 Brent≈100（增长压制区）；<br>
+            当 WTI≥${wtiT115}，相当于 Brent≈115（需求破坏风险区）
+        </div>
+        <div style="font-size:11px;color:#6b7280;">
+            说明：阈值判断以 Brent 现货（EIA spot）为宏观基准，仅用于宏观参考。
         </div>
         <div>Brent≥115天数：${days}</div>
         <div>${explain}</div>
@@ -1170,7 +1176,7 @@ async function macroCheck(){
             <li>资金确认：${flowState}</li>
             <li>${flowNote}</li>
         </ul>
-        ${buildOilStressModule(oilStress)}
+        ${buildOilStressModule(oilStress, data.oilDate, data.brentDate, data.brentFut, data.brentFutDate)}
         <div><strong>AI策略提示：</strong></div>
         ${buildStrategy(stage, {
             goldTrend: goldOilTrend,
