@@ -37,6 +37,8 @@ body{
     padding:10px;
     border-bottom:1px solid #eee;
     overflow:visible;
+    max-height:45vh;
+    overflow:auto;
 }
 
 .action-row{
@@ -195,10 +197,38 @@ input{
     margin-top:6px;
 }
 
+.macro-tag-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:6px;
+}
+.macro-tag{
+    border:none;
+    background:#eef2ff;
+    color:#1e3a8a;
+    padding:4px 8px;
+    border-radius:6px;
+    font-size:11px;
+    cursor:pointer;
+}
+.macro-tag:hover{
+    background:#c7d2fe;
+}
+
 #macroPanel{
     overflow:hidden;
     max-height:5000px;
     transition:max-height 0.25s ease;
+}
+#macroPanel .macro-layout{
+    display:grid;
+    grid-template-columns:1.2fr 1fr;
+    gap:10px;
+    align-items:start;
+}
+#macroPanel .macro-left{
+    min-width:0;
 }
 #macroPanel.collapsed{
     max-height:0;
@@ -256,6 +286,9 @@ input{
         max-height:none;
         overflow:visible;
     }
+    #macroPanel .macro-layout{
+        grid-template-columns:1fr;
+    }
     .chart-grid{
         grid-template-columns:repeat(2,1fr);
     }
@@ -283,6 +316,9 @@ input{
     .control-panel{
         max-height:none;
         overflow:visible;
+    }
+    #macroPanel .macro-layout{
+        grid-template-columns:1fr;
     }
     .quote-tile{
         height:56px;
@@ -344,13 +380,16 @@ input{
         </div>
 
         <div id="macroPanel">
-            <div id="macroLight">刷新宏观信号</div>
-            <div id="macroAdvice"></div>
-            <div id="macroMeta"></div>
-
-            <div id="alertPanel">
-                <div id="alertTitle">宏观预警</div>
-                <div id="alertList">等待数据...</div>
+            <div class="macro-layout">
+                <div class="macro-left">
+                    <div id="macroLight">刷新宏观信号</div>
+                    <div id="macroAdvice"></div>
+                    <div id="macroMeta"></div>
+                </div>
+                <div id="alertPanel">
+                    <div id="alertTitle">宏观预警</div>
+                    <div id="alertList">等待数据...</div>
+                </div>
             </div>
         </div>
 
@@ -931,6 +970,7 @@ async function macroCheck(){
         dxyPrev, us10yPrev, sp500Prev,
         vix, vixPrev, hy, hyPrev,
         cnM2, cnM2Prev, cnTSF, cnTSFPrev,
+        valuation, flow,
         ma90
     } = data;
 
@@ -1039,6 +1079,12 @@ async function macroCheck(){
     const riskState = (vix != null && vix > 25) || (hy != null && hy > 4) ? "上升" : "温和";
 
     const macroSummary = `增长${growthState}，通胀${inflationState}，流动性${liquidityState}，风险${riskState}。`;
+    const valuationState = valuation && valuation.state ? valuation.state : "N/A";
+    const valuationNote = valuation && valuation.price != null
+        ? `SPY ${valuation.price.toFixed(2)}｜MA200 ${valuation.ma200 != null ? valuation.ma200.toFixed(2) : "N/A"}｜52W高 ${valuation.high52 != null ? valuation.high52.toFixed(2) : "N/A"}`
+        : "暂无估值数据";
+    const flowState = flow && flow.state ? flow.state : "N/A";
+    const flowNote = flow && flow.details ? flow.details : "暂无资金确认数据";
 
     document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score.toFixed(1)}）`;
     document.getElementById("macroAdvice").innerHTML = `
@@ -1083,6 +1129,13 @@ async function macroCheck(){
             <li>中国流动性：${chinaLiquidityState}</li>
         </ul>
         <div><strong>宏观总结：</strong>${macroSummary}</div>
+        <div><strong>估值与资金确认：</strong></div>
+        <ul>
+            <li>估值状态：${valuationState}</li>
+            <li>${valuationNote}</li>
+            <li>资金确认：${flowState}</li>
+            <li>${flowNote}</li>
+        </ul>
         ${buildOilStressModule(oilStress)}
         <div><strong>AI策略提示：</strong></div>
         ${buildStrategy(stage, {
@@ -1106,6 +1159,36 @@ async function macroCheck(){
             stockOilTrend,
             oilTrend
         })}
+        <div style="margin-top:10px;"><strong>产业周期代理（TradingView）：</strong></div>
+        <div class="macro-tag-row">
+            <button class="macro-tag" onclick="loadChart('SMH')">SMH（AI/半导体）</button>
+            <button class="macro-tag" onclick="loadChart('XES')">XES（油服）</button>
+            <button class="macro-tag" onclick="loadChart('GRID')">GRID（电网）</button>
+        </div>
+        <div style="margin-top:8px;"><strong>商品结构（近月/次月）：</strong></div>
+        <div class="macro-tag-row">
+            <button class="macro-tag" onclick="loadChart('CL1!')">CL1!</button>
+            <button class="macro-tag" onclick="loadChart('CL2!')">CL2!</button>
+            <button class="macro-tag" onclick="loadChart('BRN1!')">BRN1!</button>
+            <button class="macro-tag" onclick="loadChart('BRN2!')">BRN2!</button>
+            <button class="macro-tag" onclick="loadChart('HG1!')">HG1!</button>
+            <button class="macro-tag" onclick="loadChart('HG2!')">HG2!</button>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:6px;">
+            结构判断：近月-次月为正表示 Backwardation，负表示 Contango（图表中观察）。
+        </div>
+        <div style="margin-top:8px;"><strong>资金周期（美股代理）：</strong></div>
+        <div class="macro-tag-row">
+            <button class="macro-tag" onclick="loadChart('QQQ/SPY')">QQQ/SPY</button>
+            <button class="macro-tag" onclick="loadChart('IWM/SPY')">IWM/SPY</button>
+            <button class="macro-tag" onclick="loadChart('HYG/IEF')">HYG/IEF</button>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:6px;">
+            QQQ/SPY 上行=成长偏好；IWM/SPY 上行=小盘风险偏好；HYG/IEF 上行=信用风险改善。
+        </div>
+        <div style="font-size:11px;color:#374151;margin-top:4px;">
+            当前信号：${flowNote}
+        </div>
         <div style="margin-top:8px;font-size:11px;color:#555;">
             数据口径：铜 USD/ton → USD/lb；油 USD/barrel；DXY 为贸易加权指数（FRED）。
         </div>
