@@ -468,7 +468,16 @@ const tvSymbolMap = {
     "BTCUSD": "BTCUSD",
     "XAUUSD/BTCUSD": "XAUUSD/BTCUSD",
     "USDCNY": "USDCNY",
-    "JPYCNY": "JPYCNY"
+    "JPYCNY": "JPYCNY",
+    "TVC:USOIL": "TVC:USOIL",
+    "TVC:UKOIL": "TVC:UKOIL",
+    "TVC:COPPER": "TVC:COPPER",
+    "QQQ/SPY": "QQQ/SPY",
+    "IWM/SPY": "IWM/SPY",
+    "HYG/IEF": "HYG/IEF",
+    "SMH": "SMH",
+    "XES": "XES",
+    "GRID": "GRID"
 };
 
 function appendSingleQuoteWidget(container, symbol){
@@ -1165,17 +1174,14 @@ async function macroCheck(){
             <button class="macro-tag" onclick="loadChart('XES')">XES（油服）</button>
             <button class="macro-tag" onclick="loadChart('GRID')">GRID（电网）</button>
         </div>
-        <div style="margin-top:8px;"><strong>商品结构（近月/次月）：</strong></div>
+        <div style="margin-top:8px;"><strong>商品结构（现货替代观察）：</strong></div>
         <div class="macro-tag-row">
-            <button class="macro-tag" onclick="loadChart('CL1!')">CL1!</button>
-            <button class="macro-tag" onclick="loadChart('CL2!')">CL2!</button>
-            <button class="macro-tag" onclick="loadChart('BRN1!')">BRN1!</button>
-            <button class="macro-tag" onclick="loadChart('BRN2!')">BRN2!</button>
-            <button class="macro-tag" onclick="loadChart('HG1!')">HG1!</button>
-            <button class="macro-tag" onclick="loadChart('HG2!')">HG2!</button>
+            <button class="macro-tag" onclick="loadChart('TVC:USOIL')">USOIL</button>
+            <button class="macro-tag" onclick="loadChart('TVC:UKOIL')">UKOIL</button>
+            <button class="macro-tag" onclick="loadChart('TVC:COPPER')">COPPER</button>
         </div>
         <div style="font-size:11px;color:#6b7280;margin-top:6px;">
-            结构判断：近月-次月为正表示 Backwardation，负表示 Contango（图表中观察）。
+            说明：部分地区 CL1!/BRN1!/HG1! 不可用，先用 TVC 现货方向参考。
         </div>
         <div style="margin-top:8px;"><strong>资金周期（美股代理）：</strong></div>
         <div class="macro-tag-row">
