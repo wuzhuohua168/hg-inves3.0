@@ -471,7 +471,7 @@ const tvSymbolMap = {
     "JPYCNY": "JPYCNY",
     "TVC:USOIL": "TVC:USOIL",
     "TVC:UKOIL": "TVC:UKOIL",
-    "TVC:COPPER": "TVC:COPPER",
+    "COPPER": "COPPER",
     "QQQ/SPY": "QQQ/SPY",
     "IWM/SPY": "IWM/SPY",
     "HYG/IEF": "HYG/IEF",
@@ -862,7 +862,6 @@ function buildOilStressModule(oilStress){
     const brent = oilStress.brent != null ? oilStress.brent.toFixed(2) : "N/A";
     const wti = oilStress.wti != null ? oilStress.wti.toFixed(2) : "N/A";
     const spread = oilStress.spread != null ? oilStress.spread.toFixed(2) : "N/A";
-    const wtiThreshold = oilStress.wtiThreshold != null ? oilStress.wtiThreshold.toFixed(2) : "N/A";
     const days = oilStress.brentAbove115Days != null ? oilStress.brentAbove115Days : "N/A";
     const wtiT90 = (oilStress.spread != null) ? (90 - oilStress.spread).toFixed(2) : "N/A";
     const wtiT100 = (oilStress.spread != null) ? (100 - oilStress.spread).toFixed(2) : "N/A";
@@ -964,8 +963,16 @@ async function macroCheck(){
         return;
     }
 
-    const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=macro`);
-    const data = await res.json();
+    let data;
+    try{
+        const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=macro`);
+        data = await res.json();
+    }catch(err){
+        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>获取失败`;
+        document.getElementById("macroAdvice").innerHTML = `宏观接口异常：${String(err)}`;
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        return;
+    }
     if (!data || data.status !== "ok"){
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
         document.getElementById("macroAdvice").innerHTML = data && data.message ? data.message : `请检查代理或数据源。`;
@@ -973,15 +980,16 @@ async function macroCheck(){
         return;
     }
 
-    const {
-        gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
-        t5y5y, real10y, walcl,
-        dxyPrev, us10yPrev, sp500Prev,
-        vix, vixPrev, hy, hyPrev,
-        cnM2, cnM2Prev, cnTSF, cnTSFPrev,
-        valuation, flow,
-        ma90
-    } = data;
+    try{
+        const {
+            gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
+            t5y5y, real10y, walcl,
+            dxyPrev, us10yPrev, sp500Prev,
+            vix, vixPrev, hy, hyPrev,
+            cnM2, cnM2Prev, cnTSF, cnTSFPrev,
+            valuation, flow,
+            ma90
+        } = data;
 
     const copperLb = copper / 2204.62262;
     const goldOil = gold / oil;
@@ -1089,11 +1097,12 @@ async function macroCheck(){
 
     const macroSummary = `增长${growthState}，通胀${inflationState}，流动性${liquidityState}，风险${riskState}。`;
     const valuationState = valuation && valuation.state ? valuation.state : "N/A";
-    const valuationNote = valuation && valuation.price != null
-        ? `SPY ${valuation.price.toFixed(2)}｜MA200 ${valuation.ma200 != null ? valuation.ma200.toFixed(2) : "N/A"}｜52W高 ${valuation.high52 != null ? valuation.high52.toFixed(2) : "N/A"}`
+    const valuationNote = valuation && valuation.current != null
+        ? `SP500 ${valuation.current.toFixed(2)}｜MA200 ${valuation.ma200 != null ? valuation.ma200.toFixed(2) : "N/A"}｜52W高 ${valuation.high52 != null ? valuation.high52.toFixed(2) : "N/A"}`
         : "暂无估值数据";
     const flowState = flow && flow.state ? flow.state : "N/A";
     const flowNote = flow && flow.details ? flow.details : "暂无资金确认数据";
+    const industryNote = data.industry && data.industry.details ? data.industry.details : "暂无产业趋势数据";
 
     document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score.toFixed(1)}）`;
     document.getElementById("macroAdvice").innerHTML = `
@@ -1174,11 +1183,14 @@ async function macroCheck(){
             <button class="macro-tag" onclick="loadChart('XES')">XES（油服）</button>
             <button class="macro-tag" onclick="loadChart('GRID')">GRID（电网）</button>
         </div>
+        <div style="font-size:11px;color:#374151;margin-top:4px;">
+            当前信号：${industryNote}
+        </div>
         <div style="margin-top:8px;"><strong>商品结构（现货替代观察）：</strong></div>
         <div class="macro-tag-row">
             <button class="macro-tag" onclick="loadChart('TVC:USOIL')">USOIL</button>
             <button class="macro-tag" onclick="loadChart('TVC:UKOIL')">UKOIL</button>
-            <button class="macro-tag" onclick="loadChart('TVC:COPPER')">COPPER</button>
+            <button class="macro-tag" onclick="loadChart('COPPER')">COPPER</button>
         </div>
         <div style="font-size:11px;color:#6b7280;margin-top:6px;">
             说明：部分地区 CL1!/BRN1!/HG1! 不可用，先用 TVC 现货方向参考。
@@ -1200,7 +1212,13 @@ async function macroCheck(){
         </div>
     `;
 
-    metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+    }catch(err){
+        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>解析失败`;
+        document.getElementById("macroAdvice").innerHTML = `宏观解析异常：${String(err)}`;
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        return;
+    }
 }
 
 async function fetchAlerts(){
