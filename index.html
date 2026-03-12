@@ -28,6 +28,19 @@ body{
 body.draw-mode{
     overflow:hidden;
 }
+body.chart-collapsed{
+    overflow:auto;
+}
+body.chart-collapsed .main{
+    flex:initial;
+    min-height:auto;
+}
+body.chart-collapsed .control-panel{
+    max-height:none;
+}
+body.chart-collapsed #macroPanel{
+    min-height:60dvh;
+}
 
 .main{
     flex:1;
@@ -58,6 +71,9 @@ body.draw-mode{
     grid-template-columns:repeat(3,1fr);
     gap:6px;
     margin-bottom:10px;
+}
+.chart-grid.collapsed{
+    display:none;
 }
 
 .quote-tile{
@@ -377,6 +393,14 @@ input{
             <button onclick="macroCheck()"
             style="background:#f59e0b;color:#fff;border:none;padding:0 12px;border-radius:8px;">
             Mac
+            </button>
+            <button id="quoteToggleBtn" onclick="toggleQuoteGrid()"
+            style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+            折叠报价
+            </button>
+            <button id="chartToggleBtn" onclick="toggleChartWrap()"
+            style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+            折叠图表
             </button>
             <button id="macroToggleBtn"
             style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
@@ -1383,6 +1407,29 @@ function toggleDrawMode(){
     const btn = document.getElementById("drawToggleBtn");
     const enabled = body.classList.toggle("draw-mode");
     if (btn) btn.textContent = enabled ? "draw on" : "draw";
+}
+
+function toggleQuoteGrid(){
+    const grid = document.getElementById("quote-grid");
+    const btn = document.getElementById("quoteToggleBtn");
+    if (!grid) return;
+    const collapsed = grid.classList.toggle("collapsed");
+    if (btn) btn.textContent = collapsed ? "展开报价" : "折叠报价";
+}
+
+function toggleChartWrap(){
+    const wrap = document.getElementById("chart-wrap");
+    const bar = document.getElementById("cycle-bar");
+    const btn = document.getElementById("chartToggleBtn");
+    if (!wrap) return;
+    const collapsed = wrap.classList.toggle("collapsed");
+    wrap.style.display = collapsed ? "none" : "block";
+    if (bar) bar.style.display = collapsed ? "none" : "flex";
+    if (btn) btn.textContent = collapsed ? "展开图表" : "折叠图表";
+    document.body.classList.toggle("chart-collapsed", collapsed);
+    if (collapsed) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
 }
 
 function initMacroToggleButton(){
