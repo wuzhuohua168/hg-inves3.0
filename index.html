@@ -1005,7 +1005,14 @@ async function macroCheck(){
     if (!DATA_SOURCE.proxyUrl){
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
         document.getElementById("macroAdvice").innerHTML = `缺少代理地址，请设置 Worker URL。`;
-        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        const now = new Date();
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+        const oilDate = data.oilDate || "";
+        const brentDate = data.brentDate || "";
+        const dateMatched = (oilDate && oilDate === todayKey) || (brentDate && brentDate === todayKey);
+        const statusText = dateMatched ? "今日已更新" : "使用缓存/延迟数据";
+        const dateText = (oilDate || brentDate) ? `数据日期：${oilDate || brentDate}` : "数据日期：N/A";
+        metaEl.textContent = `更新时间：${now.toLocaleString()} ｜ ${statusText} ｜ ${dateText}`;
         return;
     }
 
