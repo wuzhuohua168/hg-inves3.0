@@ -987,11 +987,15 @@ async function macroCheck(){
 
     let data;
     try{
-        const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=macro`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=macro`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         data = await res.json();
     }catch(err){
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>获取失败`;
-        document.getElementById("macroAdvice").innerHTML = `宏观接口异常：${String(err)}`;
+        const msg = String(err).includes("AbortError") ? "宏观接口超时，请稍后重试。" : `宏观接口异常：${String(err)}`;
+        document.getElementById("macroAdvice").innerHTML = msg;
         metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
         return;
     }
@@ -1477,7 +1481,7 @@ window.onload = function(){
     fetchAlerts();
     setInterval(fetchAlerts, 300000);
     macroCheck();
-    setInterval(macroCheck, 60000);
+    setInterval(macroCheck, 86400000);
 };
 </script>
 
