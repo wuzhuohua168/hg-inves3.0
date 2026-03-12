@@ -1007,15 +1007,15 @@ async function macroCheck(){
     }
 
     try{
-        const {
-            gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
-            t5y5y, real10y, walcl,
-            dxyPrev, us10yPrev, sp500Prev,
-            vix, vixPrev, hy, hyPrev,
-            cnM2, cnM2Prev, cnTSF, cnTSFPrev,
-            valuation, flow,
-            ma90
-        } = data;
+    const {
+        gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
+        t5y5y, real10y, walcl,
+        dxyPrev, us10yPrev, sp500Prev,
+        vix, vixPrev, hy, hyPrev,
+        cnM2, cnM2Prev, cnTSF, cnTSFPrev,
+        valuation, flow,
+        ma90
+    } = data;
 
     const copperLb = copper / 2204.62262;
     const goldOil = gold / oil;
@@ -1040,6 +1040,29 @@ async function macroCheck(){
     const t5y5yTrend = trendLabel(t5y5y, ma90 && ma90.t5y5y ? ma90.t5y5y : null);
     const real10yTrend = trendLabel(real10y, ma90 && ma90.real10y ? ma90.real10y : null);
     const walclTrend = trendLabel(walcl, ma90 && ma90.walcl ? ma90.walcl : null);
+
+    // Fallback oilStress if worker doesn't return it
+    const oilStressLocal = (() => {
+        if (oilStress && oilStress.level != null) return oilStress;
+        if (brent == null || oil == null) return null;
+        let level = 0;
+        if (brent >= 115) level = 3;
+        else if (brent >= 100) level = 2;
+        else if (brent >= 90) level = 1;
+        const spread = brent - oil;
+        return {
+            level,
+            brent,
+            wti: oil,
+            spread,
+            brentAbove115Days: 0,
+            wtiThreshold: {
+                "90": Number((90 - spread).toFixed(2)),
+                "100": Number((100 - spread).toFixed(2)),
+                "115": Number((115 - spread).toFixed(2))
+            }
+        };
+    })();
 
     const cnM2Trend = (cnM2 != null && cnM2Prev != null)
         ? (cnM2 > cnM2Prev ? "上升" : cnM2 < cnM2Prev ? "下降" : "持平")
@@ -1180,7 +1203,7 @@ async function macroCheck(){
             <li>资金确认：${flowState}</li>
             <li>${flowNote}</li>
         </ul>
-        ${buildOilStressModule(oilStress, data.oilDate, data.brentDate, data.brentFut, data.brentFutDate)}
+        ${buildOilStressModule(oilStressLocal, data.oilDate, data.brentDate, data.brentFut, data.brentFutDate)}
         <div><strong>AI策略提示：</strong></div>
         ${buildStrategy(stage, {
             goldTrend: goldOilTrend,
@@ -1190,7 +1213,7 @@ async function macroCheck(){
             hy: hy
         })}
         ${buildChinaAllocation(stage, chinaLiquidityState)}
-        ${buildOilStressChina(oilStress)}
+        ${buildOilStressChina(oilStressLocal)}
         ${buildTurningPoints({
             stagflationTurn: oilTrend === "上升" && copperOilTrend === "下降" && t5y5yTrend === "上升" && stockOilTrend === "下降",
             recessionTurn: copperOilTrend === "下降" && ((hy != null && hy > 4) || (vix != null && vix > 25)),
