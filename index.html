@@ -673,7 +673,9 @@ function buildStrategy(stage, ctx){
         ? "金油比上升 → 避险/通胀压力"
         : ctx.goldTrend === "下降"
             ? "金油比下降 → 风险偏好改善"
-            : "金油比持平 → 风险信号不明";
+            : ctx.goldTrend === "N/A"
+                ? "金油比无数据"
+                : "金油比持平 → 风险信号不明";
 
     const vixLine = ctx.vix == null
         ? "VIX 无数据"
@@ -1065,13 +1067,13 @@ async function macroCheck(){
         ma90
     } = data;
 
-    const copperLb = copper / 2204.62262;
-    const goldOil = gold / oil;
-    const copperOil = copperLb / oil;
-    const stockOil = sp500 / oil;
+    const copperLb = (copper != null) ? (copper / 2204.62262) : null;
+    const goldOil = (gold != null && oil != null) ? (gold / oil) : null;
+    const copperOil = (copperLb != null && oil != null) ? (copperLb / oil) : null;
+    const stockOil = (sp500 != null && oil != null) ? (sp500 / oil) : null;
 
     const goldOilMA = ma90 && ma90.gold && ma90.oil ? (ma90.gold / ma90.oil) : null;
-    const goldOilMAEst = (goldOilMA == null && ma90 && ma90.oil && gold) ? (gold / ma90.oil) : null;
+    const goldOilMAEst = (goldOilMA == null && ma90 && ma90.oil && gold != null) ? (gold / ma90.oil) : null;
     const goldOilMAToUse = goldOilMA != null ? goldOilMA : goldOilMAEst;
     const goldOilMALabel = goldOilMA != null
         ? goldOilMA.toFixed(2)
@@ -1206,9 +1208,9 @@ async function macroCheck(){
         <div><strong>宏观状态：</strong>${stage}</div>
         <div><strong>关键指标：</strong></div>
         <ul>
-            <li>金油比：${goldOil.toFixed(2)}</li>
-            <li>铜油比：${copperOil.toFixed(3)}</li>
-            <li>股油比：${stockOil.toFixed(2)}</li>
+            <li>金油比：${goldOil != null ? goldOil.toFixed(2) : "N/A"}</li>
+            <li>铜油比：${copperOil != null ? copperOil.toFixed(3) : "N/A"}</li>
+            <li>股油比：${stockOil != null ? stockOil.toFixed(2) : "N/A"}</li>
             <li>10Y：${us10y.toFixed(2)}</li>
             <li>DXY (Trade-Weighted)：${dxy.toFixed(2)}</li>
             <li>Brent：${brent != null ? brent.toFixed(2) : "N/A"}</li>
