@@ -177,6 +177,44 @@ input{
     font-size:11px;
     color:#666;
 }
+#manualPanel{
+    margin-top:8px;
+    padding:8px;
+    border-radius:8px;
+    background:#f8fafc;
+    border:1px solid #e5e7eb;
+    font-size:12px;
+}
+#manualPanel .manual-title{
+    font-weight:600;
+    margin-bottom:6px;
+}
+#manualPanel .manual-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+}
+#manualPanel input{
+    padding:6px 8px;
+    border-radius:6px;
+    border:1px solid #d1d5db;
+    font-size:12px;
+}
+#manualPanel .manual-actions{
+    margin-top:6px;
+    display:flex;
+    gap:6px;
+}
+#manualPanel .manual-actions button{
+    padding:4px 10px;
+    border:none;
+    border-radius:6px;
+    font-size:12px;
+    cursor:pointer;
+}
+#manualPanel .manual-apply{background:#0f766e;color:#fff;}
+#manualPanel .manual-clear{background:#e5e7eb;color:#111827;}
+#manualPanel .manual-note{margin-top:6px;color:#6b7280;}
 
 #alertPanel{
     margin-top:8px;
@@ -419,6 +457,22 @@ input{
         <div id="macroPanel">
             <div class="macro-layout">
                 <div class="macro-left">
+                    <div id="manualPanel">
+                        <div class="manual-title">手动补充（可选）</div>
+                        <div class="manual-grid">
+                            <input id="manual-gold" placeholder="黄金(USD/oz)">
+                            <input id="manual-vix" placeholder="VIX">
+                            <input id="manual-hy" placeholder="HY利差">
+                            <input id="manual-t5y5y" placeholder="通胀预期5Y5Y">
+                            <input id="manual-real10y" placeholder="10Y实际利率">
+                            <input id="manual-walcl" placeholder="美联储资产负债表">
+                        </div>
+                        <div class="manual-actions">
+                            <button class="manual-apply" onclick="applyManualOverrides()">应用</button>
+                            <button class="manual-clear" onclick="clearManualOverrides()">清除</button>
+                        </div>
+                        <div class="manual-note">仅在数据缺失时用于计算，不会覆盖已有实时值。</div>
+                    </div>
                     <div id="macroLight">刷新宏观信号</div>
                     <div id="macroAdvice"></div>
                     <div id="macroMeta"></div>
@@ -460,6 +514,7 @@ let currentSymbol = "UKOIL";
 let currentInterval = "D";
 let currentRange = null;
 let quoteObserver = null;
+const MANUAL_KEY = "macro_manual_overrides";
 
 const DATA_SOURCE = {
     provider: "twelvedata",
@@ -467,6 +522,81 @@ const DATA_SOURCE = {
     proxyUrl: "https://hg-inve3.wubairan.workers.dev",
     apiKey: "9739029be2174a14a23485c91380abe3"
 };
+
+function getManualOverrides(){
+    try{
+        const raw = localStorage.getItem(MANUAL_KEY);
+        if (!raw) return {};
+        const obj = JSON.parse(raw);
+        return obj && typeof obj === "object" ? obj : {};
+    }catch{
+        return {};
+    }
+}
+
+function setManualOverrides(obj){
+    localStorage.setItem(MANUAL_KEY, JSON.stringify(obj));
+}
+
+function applyManualOverrides(){
+    const fields = {
+        gold: "manual-gold",
+        vix: "manual-vix",
+        hy: "manual-hy",
+        t5y5y: "manual-t5y5y",
+        real10y: "manual-real10y",
+        walcl: "manual-walcl"
+    };
+    const data = {};
+    Object.keys(fields).forEach(key => {
+        const el = document.getElementById(fields[key]);
+        if (!el) return;
+        const v = parseFloat(el.value);
+        if (Number.isFinite(v)) data[key] = v;
+    });
+    setManualOverrides(data);
+    macroCheck();
+}
+
+function clearManualOverrides(){
+    localStorage.removeItem(MANUAL_KEY);
+    ["manual-gold","manual-vix","manual-hy","manual-t5y5y","manual-real10y","manual-walcl"].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+    macroCheck();
+}
+
+function applyManualToData(data){
+    const manual = getManualOverrides();
+    let used = false;
+    if (manual.gold != null && (data.gold == null)) { data.gold = manual.gold; used = true; }
+    if (manual.vix != null && (data.vix == null)) { data.vix = manual.vix; used = true; }
+    if (manual.hy != null && (data.hy == null)) { data.hy = manual.hy; used = true; }
+    if (manual.t5y5y != null && (data.t5y5y == null)) { data.t5y5y = manual.t5y5y; used = true; }
+    if (manual.real10y != null && (data.real10y == null)) { data.real10y = manual.real10y; used = true; }
+    if (manual.walcl != null && (data.walcl == null)) { data.walcl = manual.walcl; used = true; }
+    if (used) data.__manualUsed = true;
+    return data;
+}
+
+function fillManualInputs(){
+    const manual = getManualOverrides();
+    const map = {
+        gold: "manual-gold",
+        vix: "manual-vix",
+        hy: "manual-hy",
+        t5y5y: "manual-t5y5y",
+        real10y: "manual-real10y",
+        walcl: "manual-walcl"
+    };
+    Object.keys(map).forEach(key => {
+        const el = document.getElementById(map[key]);
+        if (el && manual[key] != null && manual[key] !== "") {
+            el.value = manual[key];
+        }
+    });
+}
 
 const MACRO_THRESHOLDS = {
     copperOilRecovery: 3.0,
@@ -490,7 +620,10 @@ const quickSymbols = [
     { label: "US10Y", symbol: "US10Y" },
     { label: "DXY", symbol: "DXY" },
     { label: "BTCUSD", symbol: "BTCUSD" },
-    { label: "金币比", symbol: "XAUUSD/BTCUSD" }
+    { label: "金币比", symbol: "XAUUSD/BTCUSD" },
+    { label: "VIX", symbol: "TVC:VIX", displaySymbol: "CBOE:VIX", type: "tv" },
+    { label: "HY利差", symbol: "MANUAL:HY", type: "manual" },
+    { label: "通胀预期", symbol: "MANUAL:T5Y5Y", type: "manual" }
 ];
 
 const tvSymbolMap = {
@@ -515,6 +648,7 @@ const tvSymbolMap = {
     "SMH": "SMH",
     "XES": "XES",
     "GRID": "GRID"
+    ,"TVC:VIX": "TVC:VIX"
 };
 
 function appendSingleQuoteWidget(container, symbol){
@@ -545,22 +679,42 @@ function renderQuoteGrid(){
         label.className = "quote-label";
         label.textContent = item.label;
 
-        const widgetWrap = document.createElement("div");
-        widgetWrap.className = "tradingview-widget-container";
-        widgetWrap.style.height = "100%";
-        widgetWrap.style.flex = "1";
+        let widgetWrap;
+        if (item.type === "manual"){
+            widgetWrap = document.createElement("div");
+            widgetWrap.className = "manual-quote";
+            widgetWrap.style.flex = "1";
+            widgetWrap.style.display = "flex";
+            widgetWrap.style.alignItems = "center";
+            widgetWrap.style.justifyContent = "flex-end";
+            widgetWrap.style.fontSize = "12px";
+            widgetWrap.style.color = "#111827";
+            widgetWrap.dataset.symbol = item.symbol;
+            if (item.displaySymbol){
+                widgetWrap.dataset.displaySymbol = item.displaySymbol;
+            }
+            widgetWrap.textContent = "--";
+        } else {
+            widgetWrap = document.createElement("div");
+            widgetWrap.className = "tradingview-widget-container";
+            widgetWrap.style.height = "100%";
+            widgetWrap.style.flex = "1";
 
-        const widgetTarget = document.createElement("div");
-        widgetTarget.className = "tradingview-widget-container__widget";
-        widgetTarget.style.height = "100%";
+            const widgetTarget = document.createElement("div");
+            widgetTarget.className = "tradingview-widget-container__widget";
+            widgetTarget.style.height = "100%";
 
-        widgetWrap.appendChild(widgetTarget);
-        widgetWrap.dataset.symbol = item.symbol;
-        widgetWrap.classList.add("lazy-quote");
+            widgetWrap.appendChild(widgetTarget);
+            widgetWrap.dataset.symbol = item.symbol;
+            widgetWrap.classList.add("lazy-quote");
+        }
 
         const click = document.createElement("div");
         click.className = "quote-click";
-        click.onclick = () => loadChart(item.symbol);
+        click.onclick = () => {
+            if (item.type === "manual") return;
+            loadChart(item.symbol);
+        };
 
         tile.appendChild(label);
         tile.appendChild(widgetWrap);
@@ -574,7 +728,8 @@ function initQuoteObserver(){
     if (!("IntersectionObserver" in window)){
         lazyQuotes.forEach(el => {
             if (!el.dataset.loaded){
-                appendSingleQuoteWidget(el, el.dataset.symbol);
+                const sym = el.dataset.displaySymbol || el.dataset.symbol;
+                appendSingleQuoteWidget(el, sym);
                 el.dataset.loaded = "1";
             }
         });
@@ -586,7 +741,8 @@ function initQuoteObserver(){
             if (entry.isIntersecting){
                 const el = entry.target;
                 if (!el.dataset.loaded){
-                    appendSingleQuoteWidget(el, el.dataset.symbol);
+                    const sym = el.dataset.displaySymbol || el.dataset.symbol;
+                    appendSingleQuoteWidget(el, sym);
                     el.dataset.loaded = "1";
                 }
                 quoteObserver.unobserve(el);
@@ -595,6 +751,19 @@ function initQuoteObserver(){
     }, { root: null, rootMargin: "100px", threshold: 0.1 });
 
     lazyQuotes.forEach(el => quoteObserver.observe(el));
+}
+
+function updateManualQuotes(data){
+    const map = {
+        "MANUAL:HY": data && data.hy != null ? data.hy : null,
+        "MANUAL:T5Y5Y": data && data.t5y5y != null ? data.t5y5y : null
+    };
+    const nodes = Array.from(document.querySelectorAll(".manual-quote"));
+    nodes.forEach(node => {
+        const key = node.dataset.symbol;
+        const val = map[key];
+        node.textContent = (val != null && Number.isFinite(val)) ? val.toFixed(2) : "--";
+    });
 }
 
 function loadChart(symbol){
@@ -1057,6 +1226,8 @@ async function macroCheck(){
     }
 
     try{
+    data = applyManualToData(data);
+    updateManualQuotes(data);
     const {
         gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
         t5y5y, real10y, walcl,
@@ -1311,7 +1482,8 @@ async function macroCheck(){
         </div>
     `;
 
-        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        const manualTag2 = data.__manualUsed ? " ｜ 手动补充" : "";
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}${manualTag2}`;
     }catch(err){
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>解析失败`;
         document.getElementById("macroAdvice").innerHTML = `宏观解析异常：${String(err)}`;
@@ -1573,6 +1745,7 @@ window.onload = function(){
     renderQuoteGrid();
     initQuoteObserver();
     initMacroToggleButton();
+    fillManualInputs();
     loadChart("UKOIL");
     fetchAlerts();
     setInterval(fetchAlerts, 300000);
