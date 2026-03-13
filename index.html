@@ -1006,34 +1006,51 @@ async function macroCheck(){
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
         document.getElementById("macroAdvice").innerHTML = `缺少代理地址，请设置 Worker URL。`;
         const now = new Date();
-        const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
-        const oilDate = data.oilDate || "";
-        const brentDate = data.brentDate || "";
-        const dateMatched = (oilDate && oilDate === todayKey) || (brentDate && brentDate === todayKey);
-        const statusText = dateMatched ? "今日已更新" : "使用缓存/延迟数据";
-        const dateText = (oilDate || brentDate) ? `数据日期：${oilDate || brentDate}` : "数据日期：N/A";
-        metaEl.textContent = `更新时间：${now.toLocaleString()} ｜ ${statusText} ｜ ${dateText}`;
+        metaEl.textContent = `更新时间：${now.toLocaleString()}`;
         return;
     }
 
     let data;
     try{
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
         const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=macro`, { signal: controller.signal });
         clearTimeout(timeoutId);
         data = await res.json();
     }catch(err){
-        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>获取失败`;
-        const msg = String(err).includes("AbortError") ? "宏观接口超时，请稍后重试。" : `宏观接口异常：${String(err)}`;
-        document.getElementById("macroAdvice").innerHTML = msg;
-        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
-        return;
+        const cachedRaw = localStorage.getItem("macro_cache_last");
+        if (cachedRaw){
+            try{
+                data = JSON.parse(cachedRaw);
+                data.__localCache = true;
+            }catch{
+                data = null;
+            }
+        }
+        if (!data){
+            document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>获取失败`;
+            const msg = String(err).includes("AbortError") ? "宏观接口超时，请稍后重试。" : `宏观接口异常：${String(err)}`;
+            document.getElementById("macroAdvice").innerHTML = msg;
+            metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+            return;
+        }
     }
     if (!data || data.status !== "ok"){
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
         document.getElementById("macroAdvice").innerHTML = data && data.message ? data.message : `请检查代理或数据源。`;
-        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        const now = new Date();
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+        const oilDate = data.oilDate || "";
+        const brentDate = data.brentDate || "";
+        const dateMatched = (oilDate && oilDate === todayKey) || (brentDate && brentDate === todayKey);
+        const statusText = data.__localCache
+            ? "本地缓存"
+            : (dateMatched ? "今日已更新" : "使用缓存/延迟数据");
+        const dateText = (oilDate || brentDate) ? `数据日期：${oilDate || brentDate}` : "数据日期：N/A";
+        metaEl.textContent = `更新时间：${now.toLocaleString()} ｜ ${statusText} ｜ ${dateText}`;
+        if (!data.__localCache){
+            localStorage.setItem("macro_cache_last", JSON.stringify(data));
+        }
         return;
     }
 
