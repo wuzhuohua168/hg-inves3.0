@@ -448,6 +448,7 @@ input{
                         <input id="BAMLH0A0HYM2" placeholder="HY~BAMLH0A0HYM2">
                         <input id="manual-t5y5y" placeholder="通胀预期5Y5Y">
                         <input id="manual-real10y" placeholder="10Y实际利率">
+                        <input id="manual-yieldcurve" placeholder="10Y-2Y倒挂">
                     </div>
                     <div class="manual-actions">
                         <button class="manual-apply" onclick="applyManualOverrides()">应用</button>
@@ -525,7 +526,8 @@ function applyManualOverrides(){
         vix: "manual-vix",
         hy: "BAMLH0A0HYM2",
         t5y5y: "manual-t5y5y",
-        real10y: "manual-real10y"
+        real10y: "manual-real10y",
+        yieldCurve: "manual-yieldcurve"
     };
     const data = {};
     Object.keys(fields).forEach(key => {
@@ -540,7 +542,7 @@ function applyManualOverrides(){
 
 function clearManualOverrides(){
     localStorage.removeItem(MANUAL_KEY);
-    ["manual-gold","manual-vix","BAMLH0A0HYM2","manual-t5y5y","manual-real10y"].forEach(id=>{
+    ["manual-gold","manual-vix","BAMLH0A0HYM2","manual-t5y5y","manual-real10y","manual-yieldcurve"].forEach(id=>{
         const el = document.getElementById(id);
         if (el) el.value = "";
     });
@@ -555,6 +557,7 @@ function applyManualToData(data){
     if (manual.hy != null && (data.hy == null)) { data.hy = manual.hy; used = true; }
     if (manual.t5y5y != null && (data.t5y5y == null)) { data.t5y5y = manual.t5y5y; used = true; }
     if (manual.real10y != null && (data.real10y == null)) { data.real10y = manual.real10y; used = true; }
+    if (manual.yieldCurve != null && (data.yieldCurve == null)) { data.yieldCurve = manual.yieldCurve; used = true; }
     if (used) data.__manualUsed = true;
     return data;
 }
@@ -566,7 +569,8 @@ function fillManualInputs(){
         vix: "manual-vix",
         hy: "BAMLH0A0HYM2",
         t5y5y: "manual-t5y5y",
-        real10y: "manual-real10y"
+        real10y: "manual-real10y",
+        yieldCurve: "manual-yieldcurve"
     };
     Object.keys(map).forEach(key => {
         const el = document.getElementById(map[key]);
@@ -1208,7 +1212,7 @@ async function macroCheck(){
     updateManualQuotes(data);
     const {
         gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
-        t5y5y, real10y, walcl,
+        t5y5y, real10y, walcl, us2y,
         dxyPrev, us10yPrev, sp500Prev,
         vix, vixPrev, hy, hyPrev,
         cnM2, cnM2Prev, cnTSF, cnTSFPrev,
@@ -1239,6 +1243,14 @@ async function macroCheck(){
     const t5y5yTrend = trendLabel(t5y5y, ma90 && ma90.t5y5y ? ma90.t5y5y : null);
     const real10yTrend = trendLabel(real10y, ma90 && ma90.real10y ? ma90.real10y : null);
     const walclTrend = trendLabel(walcl, ma90 && ma90.walcl ? ma90.walcl : null);
+
+    // 10Y-2Y倒挂（优先使用数据库us2y计算，手动输入兜底）
+    let yieldCurve = null;
+    if (us10y != null && us2y != null) {
+        yieldCurve = us10y - us2y;
+    } else if (data.yieldCurve != null) {
+        yieldCurve = data.yieldCurve;
+    }
 
     // Fallback oilStress if worker doesn't return it
     const oilStressLocal = (() => {
@@ -1290,6 +1302,17 @@ async function macroCheck(){
     if (goldOilTrend === "上升") score -= 1;
     if (us10yTrend === "下降" || us10yDown) score += 1;
     if (dxyTrend === "下降" || dxyDown) score += 1;
+
+    // 【修改1】替换HY利差评分 → 通胀预期 + 实际利率评分
+    if (t5y5y != null){
+        if (t5y5yTrend === "上升") score -= 1;
+        if (t5y5yTrend === "下降") score += 1;
+    }
+    if (real10y != null){
+        if (real10y > 2) score -= 1;
+        if (real10y < 1) score += 1;
+    }
+
     if (vix != null){
         if (vix > 30) score -= 2;
         else if (vix > 25 || vixUp) score -= 1;
@@ -1305,25 +1328,30 @@ async function macroCheck(){
     }
     score += getEventScore();
 
-    let stage = "扩张后期";
-    let signalClass = "yellow";
-
-    if (score >= 4){
+    // 【修改2】全新阶段划分逻辑（阈值已调整）
+    let stage = "";
+    let signalClass = "";
+    if (score >= 3){
         stage = "复苏";
         signalClass = "green";
-    } else if (score >= 2){
+    }
+    else if (score >= 1){
         stage = "扩张";
         signalClass = "green";
-    } else if (score >= 0){
+    }
+    else if (score >= -1){
         stage = "扩张后期";
         signalClass = "yellow";
-    } else if (score >= -2){
+    }
+    else if (score >= -3){
         stage = "滞胀";
         signalClass = "yellow";
-    } else {
+    }
+    else{
         stage = "衰退";
         signalClass = "red";
     }
+
     const alertData = window.__alertData || {};
     const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
     const oilShockAlert = marketAlerts.some(a => a.indexOf("油价24h上涨") !== -1);
@@ -1369,6 +1397,7 @@ async function macroCheck(){
             <li>HY利差：${hy ? hy.toFixed(2) : "N/A"}</li>
             <li>通胀预期(5Y5Y)：${t5y5y ? t5y5y.toFixed(2) : "N/A"}</li>
             <li>10Y 实际利率：${real10y ? real10y.toFixed(2) : "N/A"}</li>
+            <li>10Y-2Y倒挂：${yieldCurve != null ? yieldCurve.toFixed(2) : "N/A"}</li>
         </ul>
         <div><strong>HY利差区间宏观含义参考：</strong></div>
         <ul>
