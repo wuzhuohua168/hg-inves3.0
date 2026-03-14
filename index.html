@@ -1315,7 +1315,7 @@ async function macroCheck(){
         if (real10y < 1) score += 1;
     }
 
-    if (vix != null){
+        if (vix != null){
         if (vix > 30) score -= 2;
         else if (vix > 25 || vixUp) score -= 1;
     }
@@ -1323,6 +1323,19 @@ async function macroCheck(){
         if (hy > 6) score -= 2;
         else if (hy > 4 || hyUp) score -= 1;
     }
+
+    // 通胀预期评分
+    if (t5y5y != null){
+        if (t5y5yTrend === "上升") score -= 1;
+        if (t5y5yTrend === "下降") score += 1;
+    }
+
+    // 实际利率评分
+    if (real10y != null){
+        if (real10y > 2) score -= 1;
+        if (real10y < 1) score += 1;
+    }
+
     if (oilStress && oilStress.level != null){
         if (oilStress.level === 1) score -= 0.5;
         if (oilStress.level === 2) score -= 1;
