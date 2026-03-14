@@ -1292,81 +1292,90 @@ async function macroCheck(){
     const vixUp = vixPrev !== null ? vix > vixPrev : false;
     const hyUp = hyPrev !== null ? hy > hyPrev : false;
 
-    let score = 0;
+        let score = 0;
     let copperScore = 0;
-    if (copperOilTrend === "上升") copperScore = 2;
-    if (copperOilTrend === "下降") copperScore = -1;
-    if (ma90 && ma90.oil && oil > ma90.oil * 1.10 && copperScore > 0){
-        copperScore = 1;
+
+    // 铜油比（工业需求核心）
+    if (copperOilTrend === "上升") copperScore = 1.5;          // 原+2 → 降到+1.5
+    if (copperOilTrend === "下降") copperScore = -1.5;         // 原-1 → 加强到-1.5
+    if (ma90 && ma90.oil && oil > ma90.oil * 1.10 && copperScore > 0) {
+        copperScore = 0.8;
     }
     score += copperScore;
+
+    // 股油比（企业利润）
     if (stockOilTrend === "上升") score += 1;
+
+    // 金油比（避险/通胀）
     if (goldOilTrend === "上升") score -= 1;
+
+    // 10Y 和 DXY（鸽派友好）
     if (us10yTrend === "下降" || us10yDown) score += 1;
     if (dxyTrend === "下降" || dxyDown) score += 1;
 
-    // 【修改1】替换HY利差评分 → 通胀预期 + 实际利率评分
-    if (t5y5y != null){
+    // 通胀预期 + 实际利率
+    if (t5y5y != null) {
         if (t5y5yTrend === "上升") score -= 1;
         if (t5y5yTrend === "下降") score += 1;
     }
-    if (real10y != null){
-        if (real10y > 2) score -= 1;
+    if (real10y != null) {
+        if (real10y > 2.2) score -= 1;
         if (real10y < 1) score += 1;
     }
 
-        if (vix != null){
-        if (vix > 30) score -= 2;
-        else if (vix > 25 || vixUp) score -= 1;
+    // 风险惩罚（VIX/HY）——阈值上调
+    if (vix != null) {
+        if (vix > 35) score -= 2;
+        else if (vix > 28) score -= 1;
     }
-    if (hy != null){
+    if (hy != null) {
         if (hy > 6) score -= 2;
-        else if (hy > 4 || hyUp) score -= 1;
+        else if (hy > 5) score -= 1;
     }
 
-    // 通胀预期评分
-    if (t5y5y != null){
-        if (t5y5yTrend === "上升") score -= 1;
-        if (t5y5yTrend === "下降") score += 1;
-    }
-
-    // 实际利率评分
-    if (real10y != null){
-        if (real10y > 2) score -= 1;
-        if (real10y < 1) score += 1;
-    }
-
-    if (oilStress && oilStress.level != null){
+    // 油价冲击（关键调整：level 3 只扣1.5）
+    if (oilStress && oilStress.level != null) {
         if (oilStress.level === 1) score -= 0.5;
         if (oilStress.level === 2) score -= 1;
-        if (oilStress.level === 3) score -= 2;
+        if (oilStress.level === 3) score -= 1.5;
     }
-    score += getEventScore();
 
-    // 【修改2】全新阶段划分逻辑（阈值已调整）
+    // 事件冲击（大幅减权重）
+    score += getEventScore() * 0.6;
+
+    // 地缘override（防止高油+战争直接喊衰退）
+    let forceStagflation = false;
+    if (getEventScore() <= -1.5 && oilStress && oilStress.level >= 2 && copperOilTrend !== "下降") {
+        forceStagflation = true;
+    }
+
+    // 阶段划分（拓宽滞胀区间，推迟衰退）
     let stage = "";
     let signalClass = "";
-    if (score >= 3){
+
+    if (score >= 3) {
         stage = "复苏";
         signalClass = "green";
-    }
-    else if (score >= 1){
+    } else if (score >= 1) {
         stage = "扩张";
         signalClass = "green";
-    }
-    else if (score >= -1){
+    } else if (score >= -1.5) {
         stage = "扩张后期";
         signalClass = "yellow";
-    }
-    else if (score >= -3){
+    } else if (score >= -4.5 || forceStagflation) {
         stage = "滞胀";
         signalClass = "yellow";
-    }
-    else{
+    } else {
         stage = "衰退";
         signalClass = "red";
     }
 
+    if (forceStagflation && stage === "衰退") {
+        stage = "滞胀（地缘通胀冲击）";
+        signalClass = "yellow";
+    }
+
+    // 保留你原来的油价冲击特殊处理（可选保留）
     const alertData = window.__alertData || {};
     const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
     const oilShockAlert = marketAlerts.some(a => a.indexOf("油价24h上涨") !== -1);
@@ -1377,7 +1386,6 @@ async function macroCheck(){
         stage = "扩张后期（通胀冲击）";
         signalClass = "yellow";
     }
-
     const growthState = (copperOilTrend === "上升" || stockOilTrend === "上升") ? "偏强" :
         (copperOilTrend === "下降" && stockOilTrend === "下降") ? "偏弱" : "中性";
     const inflationState = (t5y5yTrend === "上升" || goldOilTrend === "上升") ? "上升" :
