@@ -1401,8 +1401,8 @@ async function macroCheck(){
             <li>10Y 实际利率：${real10y ? real10y.toFixed(2) : "N/A"}</li>
             <li>10Y-2Y倒挂：${yieldCurve != null ? yieldCurve.toFixed(2) : "N/A"}</li>
         </ul>
-        <div><strong>HY利差区间宏观含义参考：</strong></div>
-        <ul>
+           <div><strong style="color:#374151;">HY利差区间宏观含义参考：</strong></div>
+        <ul style="color:#6b7280;">
             <li>HY &lt;5%：利差稳定 → 金融压力有限</li>
             <li>5%≤HY≤7%：利差扩大 → 信用压力增加</li>
             <li>HY&gt;7%：利差高位 → 金融风险上升</li>
@@ -1422,13 +1422,6 @@ async function macroCheck(){
             <li>中国流动性：${chinaLiquidityState}</li>
         </ul>
         <div><strong>宏观总结：</strong>${macroSummary}</div>
-        <div><strong>估值与资金确认：</strong></div>
-        <ul>
-            <li>估值状态：${valuationState}</li>
-            <li>${valuationNote}</li>
-            <li>资金确认：${flowState}</li>
-            <li>${flowNote}</li>
-        </ul>
         ${buildOilStressModule(oilStressLocal, data.oilDate, data.brentDate, data.brentFut, data.brentFutDate)}
         <div><strong>AI策略提示：</strong></div>
         ${buildStrategy(stage, {
