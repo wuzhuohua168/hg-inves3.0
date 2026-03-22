@@ -1577,15 +1577,19 @@ async function fetchAlerts(){
                     </li>`;
             }
             const title = a.title || "";
+            const score = (a.score != null && Number.isFinite(a.score)) ? a.score : null;
+            const stars = a.stars || "";
             const translated = a.translated || "";
             const link = a.link || "";
             const tag = a.tag || "事件";
             const safeLink = link ? `<a href="${link}" target="_blank" rel="noopener">来源</a>` : "";
-            const cn = translated || translateNewsTitle(title);
+            const enLine = a.display || (score != null ? `${title}，${stars}，影响评分${score}分` : title);
+            const cnBase = translated || translateNewsTitle(title);
+            const cn = score != null ? `${cnBase}，${stars}，影响评分${score}分` : cnBase;
             return `
                 <li>
                     <span class="alert-tag">${tag}</span>
-                    <div class="alert-title-en">EN: ${title} ${safeLink}</div>
+                    <div class="alert-title-en">EN: ${enLine} ${safeLink}</div>
                     <div class="alert-title-cn">CN: ${cn}</div>
                 </li>`;
         }).join("");
