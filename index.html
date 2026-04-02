@@ -1642,6 +1642,7 @@ async function shareHighImpactAlertsImage(){
 
     const title = "宏观预警高影响新闻";
     const subtitle = alertData.summary || `导出时间：${new Date().toLocaleString()}`;
+    const footer = "HGCD宏观事件";
     const width = 1080;
     const padding = 48;
     const lineHeight = 34;
@@ -1679,7 +1680,7 @@ async function shareHighImpactAlertsImage(){
             });
             h += itemGap;
         });
-        h += 40;
+        h += 120;
         return h;
     };
 
@@ -1721,6 +1722,12 @@ async function shareHighImpactAlertsImage(){
         ctx.stroke();
         currentY += 8;
     });
+
+    ctx.fillStyle = "#92400e";
+    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(footer, width - padding, canvas.height - 36);
+    ctx.textAlign = "left";
 
     const filename = `macro-alerts-${new Date().toISOString().slice(0,10)}.png`;
     const dataUrl = canvas.toDataURL("image/png");
