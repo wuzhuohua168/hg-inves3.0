@@ -1647,6 +1647,8 @@ async function shareHighImpactAlertsImage(){
     const padding = 48;
     const lineHeight = 34;
     const itemGap = 22;
+    const headerReserve = 140;
+    const footerReserve = 140;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -1663,7 +1665,7 @@ async function shareHighImpactAlertsImage(){
     });
 
     const measureHeight = () => {
-        let h = padding + 60 + 40;
+        let h = padding + headerReserve;
         blocks.forEach(lines => {
             lines.forEach(text => {
                 let line = "";
@@ -1677,10 +1679,11 @@ async function shareHighImpactAlertsImage(){
                     }
                 }
                 if (line) h += lineHeight;
+                h += 6;
             });
             h += itemGap;
         });
-        h += 120;
+        h += footerReserve;
         return h;
     };
 
@@ -1701,7 +1704,7 @@ async function shareHighImpactAlertsImage(){
     ctx.font = "22px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.fillText(subtitle, padding, 112);
 
-    let currentY = 170;
+    let currentY = padding + 122;
     blocks.forEach(lines => {
         ctx.fillStyle = "#111827";
         ctx.font = "28px -apple-system, BlinkMacSystemFont, sans-serif";
@@ -1720,13 +1723,26 @@ async function shareHighImpactAlertsImage(){
         ctx.moveTo(padding, currentY - 10);
         ctx.lineTo(width - padding, currentY - 10);
         ctx.stroke();
-        currentY += 8;
+        currentY += 12;
     });
+
+    const footerTop = canvas.height - footerReserve + 42;
+    ctx.strokeStyle = "#fdba74";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, footerTop - 22);
+    ctx.lineTo(width - padding, footerTop - 22);
+    ctx.stroke();
+
+    ctx.fillStyle = "#7c2d12";
+    ctx.font = "20px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("高影响预警分享图", padding, footerTop + 10);
 
     ctx.fillStyle = "#92400e";
     ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
     ctx.textAlign = "right";
-    ctx.fillText(footer, width - padding, canvas.height - 36);
+    ctx.fillText(footer, width - padding, canvas.height - 48);
     ctx.textAlign = "left";
 
     const filename = `macro-alerts-${new Date().toISOString().slice(0,10)}.png`;
