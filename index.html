@@ -411,11 +411,11 @@ input{
         </button>
         <button id="macroDataToggleBtn" onclick="toggleSubPanel('macroDataPanel','macroDataToggleBtn','收起宏观','展开宏观')"
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
-        收起宏观
+        展开宏观
         </button>
         <button id="alertToggleBtn" onclick="toggleSubPanel('alertPanel','alertToggleBtn','收起预警','展开预警')"
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
-        收起预警
+        展开预警
         </button>
         <button onclick="copyMacro()"
         style="background:#0f766e;color:#fff;border:none;padding:0 10px;border-radius:8px;">
@@ -433,12 +433,12 @@ input{
 
         <div id="macroPanel">
             <div class="macro-layout">
-                <div id="macroDataPanel" class="macro-left">
+                <div id="macroDataPanel" class="macro-left panel-collapsed">
                     <div id="macroLight">刷新宏观信号</div>
                     <div id="macroAdvice"></div>
                     <div id="macroMeta"></div>
                 </div>
-                <div id="alertPanel">
+                <div id="alertPanel" class="panel-collapsed">
                     <div id="alertTitle">宏观预警</div>
                     <div id="alertList">等待数据...</div>
                 </div>
@@ -1070,6 +1070,18 @@ async function macroCheck(){
     }
 
     let data;
+    const loadCachedMacro = () => {
+        const cachedRaw = localStorage.getItem("macro_cache_last");
+        if (!cachedRaw) return null;
+        try{
+            const cached = JSON.parse(cachedRaw);
+            if (cached && cached.status === "ok"){
+                cached.__localCache = true;
+                return cached;
+            }
+        }catch{}
+        return null;
+    };
     try{
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -1077,15 +1089,7 @@ async function macroCheck(){
         clearTimeout(timeoutId);
         data = await res.json();
     }catch(err){
-        const cachedRaw = localStorage.getItem("macro_cache_last");
-        if (cachedRaw){
-            try{
-                data = JSON.parse(cachedRaw);
-                data.__localCache = true;
-            }catch{
-                data = null;
-            }
-        }
+        data = loadCachedMacro();
         if (!data){
             document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>获取失败`;
             const msg = String(err).includes("AbortError") ? "宏观接口超时，请稍后重试。" : `宏观接口异常：${String(err)}`;
@@ -1095,6 +1099,10 @@ async function macroCheck(){
         }
     }
     if (!data || data.status !== "ok"){
+        const cached = loadCachedMacro();
+        if (cached){
+            data = cached;
+        } else {
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
         document.getElementById("macroAdvice").innerHTML = data && data.message ? data.message : `请检查代理或数据源。`;
         const now = new Date();
@@ -1107,11 +1115,11 @@ async function macroCheck(){
             : (dateMatched ? "今日已更新" : "使用缓存/延迟数据");
         const dateText = (oilDate || brentDate) ? `数据日期：${oilDate || brentDate}` : "数据日期：N/A";
         metaEl.textContent = `更新时间：${now.toLocaleString()} ｜ ${statusText} ｜ ${dateText}`;
-        if (!data.__localCache){
-            localStorage.setItem("macro_cache_last", JSON.stringify(data));
-        }
         return;
+        }
     }
+
+    localStorage.setItem("macro_cache_last", JSON.stringify(data));
 
     try{
     updateManualQuotes(data);
