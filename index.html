@@ -406,6 +406,10 @@ input{
         style="background:#0f766e;color:#fff;border:none;padding:0 10px;border-radius:8px;">
         复制
         </button>
+        <button onclick="exportHighImpactAlertsImage()"
+        style="background:#b45309;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        预警图片
+        </button>
         <button id="drawToggleBtn" onclick="toggleDrawMode()"
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
         draw
@@ -1609,6 +1613,132 @@ async function copyMacro(){
     }catch(err){
         alert("复制失败，请检查浏览器权限");
     }
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight){
+    const paragraphs = String(text || "").split("\n");
+    let currentY = y;
+    paragraphs.forEach((paragraph, idx) => {
+        if (!paragraph.trim()){
+            currentY += lineHeight;
+            return;
+        }
+        let line = "";
+        for (const ch of paragraph) {
+            const testLine = line + ch;
+            if (ctx.measureText(testLine).width > maxWidth && line) {
+                ctx.fillText(line, x, currentY);
+                line = ch;
+                currentY += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        if (line) {
+            ctx.fillText(line, x, currentY);
+            currentY += lineHeight;
+        }
+        if (idx !== paragraphs.length - 1) currentY += 2;
+    });
+    return currentY;
+}
+
+function exportHighImpactAlertsImage(){
+    const alertData = window.__alertData || {};
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const highImpact = newsAlerts.filter(item => typeof item !== "string" && Number(item.score) >= 6);
+
+    if (!highImpact.length){
+        alert("暂无三星以上宏观预警新闻");
+        return;
+    }
+
+    const title = "宏观预警高影响新闻";
+    const subtitle = alertData.summary || `导出时间：${new Date().toLocaleString()}`;
+    const width = 1080;
+    const padding = 48;
+    const lineHeight = 34;
+    const itemGap = 22;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.font = "28px -apple-system, BlinkMacSystemFont, sans-serif";
+
+    const blocks = highImpact.map((item, index) => {
+        const stars = item.stars || "";
+        const score = item.score != null ? `影响评分${item.score}分` : "";
+        const en = `${index + 1}. ${item.title || ""} ${stars} ${score}`.trim();
+        const cnBase = item.translated || "";
+        const cn = cnBase ? `CN: ${cnBase}` : "";
+        const link = item.link ? `来源: ${item.link}` : "";
+        return [en, cn, link].filter(Boolean);
+    });
+
+    const measureHeight = () => {
+        let h = padding + 60 + 40;
+        blocks.forEach(lines => {
+            lines.forEach(text => {
+                let line = "";
+                for (const ch of text) {
+                    const testLine = line + ch;
+                    if (ctx.measureText(testLine).width > (width - padding * 2) && line) {
+                        h += lineHeight;
+                        line = ch;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                if (line) h += lineHeight;
+            });
+            h += itemGap;
+        });
+        h += 40;
+        return h;
+    };
+
+    canvas.width = width;
+    canvas.height = measureHeight();
+
+    const gradient = ctx.createLinearGradient(0, 0, width, canvas.height);
+    gradient.addColorStop(0, "#fff7ed");
+    gradient.addColorStop(1, "#eff6ff");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, canvas.height);
+
+    ctx.fillStyle = "#9a3412";
+    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(title, padding, 72);
+
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "22px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(subtitle, padding, 112);
+
+    let currentY = 170;
+    blocks.forEach(lines => {
+        ctx.fillStyle = "#111827";
+        ctx.font = "28px -apple-system, BlinkMacSystemFont, sans-serif";
+        currentY = wrapCanvasText(ctx, lines[0], padding, currentY, width - padding * 2, lineHeight);
+        for (let i = 1; i < lines.length; i++) {
+            ctx.fillStyle = i === 1 ? "#1d4ed8" : "#6b7280";
+            ctx.font = i === 1
+                ? "24px -apple-system, BlinkMacSystemFont, sans-serif"
+                : "20px -apple-system, BlinkMacSystemFont, sans-serif";
+            currentY = wrapCanvasText(ctx, lines[i], padding + 12, currentY + 4, width - padding * 2 - 12, lineHeight);
+        }
+        currentY += itemGap;
+        ctx.strokeStyle = "#fed7aa";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, currentY - 10);
+        ctx.lineTo(width - padding, currentY - 10);
+        ctx.stroke();
+        currentY += 8;
+    });
+
+    const link = document.createElement("a");
+    link.download = `macro-alerts-${new Date().toISOString().slice(0,10)}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
 }
 
 
