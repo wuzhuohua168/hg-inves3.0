@@ -1630,6 +1630,30 @@ function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight){
     return currentY;
 }
 
+function measureWrappedTextHeight(ctx, text, maxWidth, lineHeight){
+    const paragraphs = String(text || "").split("\n");
+    let height = 0;
+    paragraphs.forEach((paragraph, idx) => {
+        if (!paragraph.trim()){
+            height += lineHeight;
+            return;
+        }
+        let line = "";
+        for (const ch of paragraph) {
+            const testLine = line + ch;
+            if (ctx.measureText(testLine).width > maxWidth && line) {
+                height += lineHeight;
+                line = ch;
+            } else {
+                line = testLine;
+            }
+        }
+        if (line) height += lineHeight;
+        if (idx !== paragraphs.length - 1) height += 2;
+    });
+    return height;
+}
+
 async function shareHighImpactAlertsImage(){
     const alertData = window.__alertData || {};
     const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
@@ -1667,21 +1691,16 @@ async function shareHighImpactAlertsImage(){
     const measureHeight = () => {
         let h = padding + headerReserve;
         blocks.forEach(lines => {
-            lines.forEach(text => {
-                let line = "";
-                for (const ch of text) {
-                    const testLine = line + ch;
-                    if (ctx.measureText(testLine).width > (width - padding * 2) && line) {
-                        h += lineHeight;
-                        line = ch;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                if (line) h += lineHeight;
-                h += 6;
-            });
-            h += itemGap;
+            ctx.font = "28px -apple-system, BlinkMacSystemFont, sans-serif";
+            h += measureWrappedTextHeight(ctx, lines[0], width - padding * 2, lineHeight);
+            for (let i = 1; i < lines.length; i++) {
+                ctx.font = i === 1
+                    ? "24px -apple-system, BlinkMacSystemFont, sans-serif"
+                    : "20px -apple-system, BlinkMacSystemFont, sans-serif";
+                h += 4;
+                h += measureWrappedTextHeight(ctx, lines[i], width - padding * 2 - 12, lineHeight);
+            }
+            h += itemGap + 12;
         });
         h += footerReserve;
         return h;
