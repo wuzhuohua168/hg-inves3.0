@@ -236,6 +236,17 @@ input{
     background:#c7d2fe;
 }
 
+.macro-layout{
+    display:grid;
+    grid-template-columns:1.3fr 1fr;
+    gap:10px;
+    align-items:start;
+}
+
+.panel-collapsed{
+    display:none !important;
+}
+
 #macroPanel {
     overflow: hidden;
     max-height: 5000px;
@@ -398,17 +409,21 @@ input{
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
         折叠图表
         </button>
-        <button id="macroToggleBtn"
+        <button id="macroDataToggleBtn" onclick="toggleSubPanel('macroDataPanel','macroDataToggleBtn','收起宏观','展开宏观')"
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
-        收起
+        收起宏观
+        </button>
+        <button id="alertToggleBtn" onclick="toggleSubPanel('alertPanel','alertToggleBtn','收起预警','展开预警')"
+        style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        收起预警
         </button>
         <button onclick="copyMacro()"
         style="background:#0f766e;color:#fff;border:none;padding:0 10px;border-radius:8px;">
         复制
         </button>
-        <button onclick="exportHighImpactAlertsImage()"
+        <button onclick="shareHighImpactAlertsImage()"
         style="background:#b45309;color:#fff;border:none;padding:0 10px;border-radius:8px;">
-        预警图片
+        分享预警
         </button>
         <button id="drawToggleBtn" onclick="toggleDrawMode()"
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
@@ -418,17 +433,17 @@ input{
 
         <div id="macroPanel">
             <div class="macro-layout">
-                <div class="macro-left">
+                <div id="macroDataPanel" class="macro-left">
                     <div id="macroLight">刷新宏观信号</div>
                     <div id="macroAdvice"></div>
                     <div id="macroMeta"></div>
                 </div>
-            <div id="alertPanel">
-                <div id="alertTitle">宏观预警</div>
-                <div id="alertList">等待数据...</div>
+                <div id="alertPanel">
+                    <div id="alertTitle">宏观预警</div>
+                    <div id="alertList">等待数据...</div>
+                </div>
             </div>
         </div>
-    </div>
 
 </div>
 
@@ -1500,9 +1515,17 @@ function backToQuotes(){
 
 function toggleMacroPanel(evt){
     const panel = document.getElementById("macroPanel");
-    const btn = evt && evt.currentTarget ? evt.currentTarget : document.getElementById("macroToggleBtn");
+    const btn = evt && evt.currentTarget ? evt.currentTarget : null;
     const collapsed = panel.classList.toggle("collapsed");
-    if (btn) btn.textContent = collapsed ? "展开" : "收起";
+    if (btn) btn.textContent = collapsed ? "展开总览" : "收起总览";
+}
+
+function toggleSubPanel(panelId, btnId, collapseText, expandText){
+    const panel = document.getElementById(panelId);
+    const btn = document.getElementById(btnId);
+    if (!panel) return;
+    const collapsed = panel.classList.toggle("panel-collapsed");
+    if (btn) btn.textContent = collapsed ? expandText : collapseText;
 }
 
 function toggleDrawMode(){
@@ -1533,42 +1556,6 @@ function toggleChartWrap(){
     if (collapsed) {
         window.scrollTo({ top: 0, behavior: "smooth" });
     }
-}
-
-function initMacroToggleButton(){
-    const btn = document.getElementById("macroToggleBtn");
-    if (!btn) return;
-    let touchMoved = false;
-    let startX = 0;
-    let startY = 0;
-    let lastTouchToggle = 0;
-
-    btn.addEventListener("touchstart", (e) => {
-        const t = e.touches && e.touches[0];
-        if (!t) return;
-        touchMoved = false;
-        startX = t.clientX;
-        startY = t.clientY;
-    }, { passive: true });
-
-    btn.addEventListener("touchmove", (e) => {
-        const t = e.touches && e.touches[0];
-        if (!t) return;
-        const dx = Math.abs(t.clientX - startX);
-        const dy = Math.abs(t.clientY - startY);
-        if (dx > 6 || dy > 6) touchMoved = true;
-    }, { passive: true });
-
-    btn.addEventListener("touchend", (e) => {
-        if (touchMoved) return;
-        lastTouchToggle = Date.now();
-        toggleMacroPanel(e);
-    });
-
-    btn.addEventListener("click", (e) => {
-        if (Date.now() - lastTouchToggle < 500) return;
-        toggleMacroPanel(e);
-    });
 }
 
 async function copyMacro(){
@@ -1643,7 +1630,7 @@ function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight){
     return currentY;
 }
 
-function exportHighImpactAlertsImage(){
+async function shareHighImpactAlertsImage(){
     const alertData = window.__alertData || {};
     const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
     const highImpact = newsAlerts.filter(item => typeof item !== "string" && Number(item.score) >= 6);
@@ -1735,10 +1722,35 @@ function exportHighImpactAlertsImage(){
         currentY += 8;
     });
 
-    const link = document.createElement("a");
-    link.download = `macro-alerts-${new Date().toISOString().slice(0,10)}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+    const filename = `macro-alerts-${new Date().toISOString().slice(0,10)}.png`;
+    const dataUrl = canvas.toDataURL("image/png");
+
+    const fallbackDownload = () => {
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = dataUrl;
+        link.click();
+    };
+
+    try{
+        if (navigator.share && window.File && canvas.toBlob) {
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+            if (blob) {
+                const file = new File([blob], filename, { type: "image/png" });
+                if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: "宏观预警高影响新闻",
+                        text: "分享当前三星以上宏观预警新闻",
+                        files: [file]
+                    });
+                    return;
+                }
+            }
+        }
+        fallbackDownload();
+    }catch(err){
+        fallbackDownload();
+    }
 }
 
 
@@ -1775,7 +1787,6 @@ function toggleNews(){
 window.onload = function(){
     renderQuoteGrid();
     initQuoteObserver();
-    initMacroToggleButton();
     loadChart("UKOIL");
     fetchAlerts();
     setInterval(fetchAlerts, 300000);
