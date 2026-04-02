@@ -172,37 +172,6 @@ input{
     font-size:11px;
     color:#666;
 }
-#manualPanel{
-    margin-top:8px;
-    padding:8px;
-    border-radius:8px;
-    background:#f8fafc;
-    border:1px solid #e5e7eb;
-    font-size:12px;
-}
-#manualPanel .manual-title{
-    font-weight:600;
-    margin-bottom:6px;
-}
-#manualPanel .manual-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(140px,1fr));
-    gap:6px;
-}
-#manualPanel input{
-    padding:6px 8px;
-    border-radius:6px;
-    border:1px solid #d1d5db;
-    font-size:12px;
-}
-#manualPanel .manual-actions{
-    margin-top:6px;
-    display:flex;
-    gap:6px;
-}
-#manualPanel .manual-apply{background:#0f766e;color:#fff;}
-#manualPanel .manual-clear{background:#e5e7eb;color:#111827;}
-#manualPanel .manual-note{margin-top:6px;color:#6b7280;}
 
 #alertPanel{
     margin-top:8px;
@@ -443,29 +412,13 @@ input{
         </button>
     </div>
 
-    <div id="macroPanel">
-        <div class="macro-layout">
-            <div class="macro-left">
-                <div id="manualPanel">
-                    <div class="manual-title">手动补充（可选）</div>
-                    <div class="manual-grid">
-                        <input id="manual-gold" placeholder="黄金(USD/oz)">
-                        <input id="manual-vix" placeholder="VIX">
-                        <input id="BAMLH0A0HYM2" placeholder="HY~BAMLH0A0HYM2">
-                        <input id="manual-t5y5y" placeholder="通胀预期5Y5Y">
-                        <input id="manual-real10y" placeholder="10Y实际利率">
-                        <input id="manual-yieldcurve" placeholder="10Y-2Y倒挂">
-                    </div>
-                    <div class="manual-actions">
-                        <button class="manual-apply" onclick="applyManualOverrides()">应用</button>
-                        <button class="manual-clear" onclick="clearManualOverrides()">清除</button>
-                    </div>
-                    <div class="manual-note">仅在数据缺失时用于计算，不会覆盖已有实时值。</div>
+        <div id="macroPanel">
+            <div class="macro-layout">
+                <div class="macro-left">
+                    <div id="macroLight">刷新宏观信号</div>
+                    <div id="macroAdvice"></div>
+                    <div id="macroMeta"></div>
                 </div>
-                <div id="macroLight">刷新宏观信号</div>
-                <div id="macroAdvice"></div>
-                <div id="macroMeta"></div>
-            </div>
             <div id="alertPanel">
                 <div id="alertTitle">宏观预警</div>
                 <div id="alertList">等待数据...</div>
@@ -502,7 +455,6 @@ let currentSymbol = "UKOIL";
 let currentInterval = "D";
 let currentRange = null;
 let quoteObserver = null;
-const MANUAL_KEY = "macro_manual_overrides";
 
 const DATA_SOURCE = {
     provider: "twelvedata",
@@ -510,81 +462,6 @@ const DATA_SOURCE = {
     proxyUrl: "https://hg-inve3.wubairan.workers.dev",
     apiKey: "9739029be2174a14a23485c91380abe3"
 };
-
-function getManualOverrides(){
-    try{
-        const raw = localStorage.getItem(MANUAL_KEY);
-        if (!raw) return {};
-        const obj = JSON.parse(raw);
-        return obj && typeof obj === "object" ? obj : {};
-    }catch{
-        return {};
-    }
-}
-
-function setManualOverrides(obj){
-    localStorage.setItem(MANUAL_KEY, JSON.stringify(obj));
-}
-
-function applyManualOverrides(){
-    const fields = {
-        gold: "manual-gold",
-        vix: "manual-vix",
-        hy: "BAMLH0A0HYM2",
-        t5y5y: "manual-t5y5y",
-        real10y: "manual-real10y",
-        yieldCurve: "manual-yieldcurve"
-    };
-    const data = {};
-    Object.keys(fields).forEach(key => {
-        const el = document.getElementById(fields[key]);
-        if (!el) return;
-        const v = parseFloat(el.value);
-        if (Number.isFinite(v)) data[key] = v;
-    });
-    setManualOverrides(data);
-    macroCheck();
-}
-
-function clearManualOverrides(){
-    localStorage.removeItem(MANUAL_KEY);
-    ["manual-gold","manual-vix","BAMLH0A0HYM2","manual-t5y5y","manual-real10y","manual-yieldcurve"].forEach(id=>{
-        const el = document.getElementById(id);
-        if (el) el.value = "";
-    });
-    macroCheck();
-}
-
-function applyManualToData(data){
-    const manual = getManualOverrides();
-    let used = false;
-    if (manual.gold != null && (data.gold == null)) { data.gold = manual.gold; used = true; }
-    if (manual.vix != null && (data.vix == null)) { data.vix = manual.vix; used = true; }
-    if (manual.hy != null && (data.hy == null)) { data.hy = manual.hy; used = true; }
-    if (manual.t5y5y != null && (data.t5y5y == null)) { data.t5y5y = manual.t5y5y; used = true; }
-    if (manual.real10y != null && (data.real10y == null)) { data.real10y = manual.real10y; used = true; }
-    if (manual.yieldCurve != null && (data.yieldCurve == null)) { data.yieldCurve = manual.yieldCurve; used = true; }
-    if (used) data.__manualUsed = true;
-    return data;
-}
-
-function fillManualInputs(){
-    const manual = getManualOverrides();
-    const map = {
-        gold: "manual-gold",
-        vix: "manual-vix",
-        hy: "BAMLH0A0HYM2",
-        t5y5y: "manual-t5y5y",
-        real10y: "manual-real10y",
-        yieldCurve: "manual-yieldcurve"
-    };
-    Object.keys(map).forEach(key => {
-        const el = document.getElementById(map[key]);
-        if (el && manual[key] != null && manual[key] !== "") {
-            el.value = manual[key];
-        }
-    });
-}
 
 const MACRO_THRESHOLDS = {
     copperOilRecovery: 3.0,
@@ -1216,7 +1093,6 @@ async function macroCheck(){
     }
 
     try{
-    data = applyManualToData(data);
     updateManualQuotes(data);
     const {
         gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
@@ -1256,8 +1132,6 @@ async function macroCheck(){
     let yieldCurve = null;
     if (us10y != null && us2y != null) {
         yieldCurve = us10y - us2y;
-    } else if (data.yieldCurve != null) {
-        yieldCurve = data.yieldCurve;
     }
 
     // Fallback oilStress if worker doesn't return it
@@ -1506,8 +1380,7 @@ async function macroCheck(){
         </div>
     `;
 
-        const manualTag2 = data.__manualUsed ? " ｜ 手动补充" : "";
-        metaEl.textContent = `更新时间：${new Date().toLocaleString()}${manualTag2}`;
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
     }catch(err){
         document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>解析失败`;
         document.getElementById("macroAdvice").innerHTML = `宏观解析异常：${String(err)}`;
@@ -1773,7 +1646,6 @@ window.onload = function(){
     renderQuoteGrid();
     initQuoteObserver();
     initMacroToggleButton();
-    fillManualInputs();
     loadChart("UKOIL");
     fetchAlerts();
     setInterval(fetchAlerts, 300000);
