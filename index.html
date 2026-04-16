@@ -951,10 +951,11 @@ function buildOilStressChina(oilStress){
 }
 
 function buildOilStressModule(oilStress, oilDate, brentDate, brentFut, brentFutDate){
-    if (!oilStress || oilStress.level == null){
+    if (!oilStress){
         return `<div><strong>能源压力等级：</strong>N/A</div>`;
     }
-    const level = oilStress.level;
+    
+    const level = oilStress.level != null ? oilStress.level : "N/A";
     const brent = oilStress.brent != null ? oilStress.brent.toFixed(2) : "N/A";
     const wti = oilStress.wti != null ? oilStress.wti.toFixed(2) : "N/A";
     const spread = oilStress.spread != null ? oilStress.spread.toFixed(2) : "N/A";
@@ -964,9 +965,10 @@ function buildOilStressModule(oilStress, oilDate, brentDate, brentFut, brentFutD
     const wtiT115 = (oilStress.spread != null) ? (115 - oilStress.spread).toFixed(2) : "N/A";
 
     let explain = "油价中性，通胀压力有限。";
-    if (level === 1) explain = "油价进入通胀压力区，能源成本推高CPI。";
-    if (level === 2) explain = "油价进入增长压制区，企业利润承压。";
-    if (level === 3) explain = "油价进入需求破坏区，滞胀风险上升。";
+    if (oilStress.level === 1) explain = "油价进入通胀压力区，能源成本推高CPI。";
+    if (oilStress.level === 2) explain = "油价进入增长压制区，企业利润承压。";
+    if (oilStress.level === 3) explain = "油价进入需求破坏区，滞胀风险上升。";
+    if (oilStress.level == null) explain = "数据缺失，无法判断油价压力等级。";
 
     return `
         <div><strong>能源压力等级：</strong>${level}</div>
@@ -1326,7 +1328,7 @@ async function macroCheck(){
             <li>SP500：${sp500 ? sp500.toFixed(2) : "N/A"}</li>
             <li>VIX：${vix ? vix.toFixed(2) : "N/A"}</li>
             <li>HY利差：${hy ? hy.toFixed(2) : "N/A"}</li>
-            <li>通胀预期(5Y5Y)：${t5y5y ? t5y5y.toFixed(2) : "N/A"}</li>
+            <li>年盈亏平衡通胀率 (T5YIE)：${t5y5y ? t5y5y.toFixed(2) : "N/A"}</li>
             <li>10Y 实际利率：${real10y ? real10y.toFixed(2) : "N/A"}</li>
             <li>10Y-2Y倒挂：${yieldCurve != null ? yieldCurve.toFixed(2) : "N/A"}</li>
         </ul>
@@ -1840,5 +1842,18 @@ window.onload = function(){
     macroCheck();
     setInterval(macroCheck, 86400000);
 };
+</script>
+<script>
+(function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('from') !== 'workbench') return;
+    const btn = document.createElement('button');
+    btn.textContent = '返回工作台';
+    btn.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:rgba(31,122,92,0.94);color:#fff;border:none;border-radius:999px;padding:12px 16px;font-size:13px;font-weight:bold;box-shadow:0 10px 30px rgba(0,0,0,0.16);';
+    btn.onclick = function () {
+        window.location.href = new URL('物流工作台.html', window.location.href).href;
+    };
+    document.body.appendChild(btn);
+})();
 </script></body>
 </html>
