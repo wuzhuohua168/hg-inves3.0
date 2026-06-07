@@ -1,0 +1,2777 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HG Investing Pro</title><script src="https://s3.tradingview.com/tv.js"></script><style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
+body{
+    background:#f0f3f7;
+    font-family:-apple-system,sans-serif;
+    height:100vh;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    overflow:auto;
+}
+body.draw-mode{
+    overflow:hidden;
+}
+body.chart-collapsed{
+    overflow:auto;
+}
+body.chart-collapsed .main{
+    flex:initial;
+    min-height:auto;
+}
+body.chart-collapsed .control-panel{
+    max-height:none;
+}
+body.chart-collapsed #macroPanel{
+    min-height:60dvh;
+}
+
+.main{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+
+.control-panel{
+    background:#fff;
+    padding:10px;
+    border-bottom:1px solid #eee;
+    overflow:visible;
+    max-height:45vh;
+    overflow:auto;
+}
+
+.action-row{
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+}
+.action-row button{
+    white-space:nowrap;
+}
+
+.chart-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+    margin-bottom:10px;
+}
+.chart-grid.collapsed{
+    display:none;
+}
+
+.quote-tile{
+    position:relative;
+    background:#f1f3f6;
+    border-radius:8px;
+    overflow:hidden;
+    height:54px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 8px;
+}
+
+.quote-label{
+    font-size:9px;
+    color:#555;
+    pointer-events:none;
+    white-space:nowrap;
+}
+
+.quote-click{
+    position:absolute;
+    inset:0;
+    cursor:pointer;
+    z-index:3;
+}
+
+input{
+    padding:8px;
+    border-radius:6px;
+    border:1px solid #ddd;
+}
+
+#chart-wrap{
+    flex:1;
+    width:100%;
+    position:relative;
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+#stock-chart-container{
+    width:100%;
+    height:100%;
+    position:relative;
+    z-index:1;
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+#stock-chart-container iframe{
+    position:relative;
+    z-index:1;
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+
+#cycle-bar{
+    position:absolute;
+    left:10px;
+    bottom:36px;
+    display:flex;
+    gap:6px;
+    padding:4px 6px;
+    background:rgba(255,255,255,0.9);
+    border:1px solid #eee;
+    border-radius:8px;
+    z-index:10;
+    pointer-events:auto;
+}
+.cycle-btn{
+    padding:4px 8px;
+    font-size:12px;
+    background:#f3f4f6;
+    border-radius:6px;
+    cursor:pointer;
+    user-select:none;
+}
+.cycle-btn:hover{background:#dbeafe;}
+.cycle-btn.active{background:#dbeafe;color:#1e40af;font-weight:bold;}
+
+#macroLight{
+    margin:6px 0;
+    padding:6px;
+    border-radius:6px;
+    font-size:12px;
+    background:#3b82f6;
+    color:#fff;
+}
+
+#macroAdvice{
+    margin:6px 0;
+    padding:6px;
+    border-radius:6px;
+    font-size:12px;
+    background:#e0f2fe;
+    color:#000;
+}
+
+#macroMeta{
+    margin-top:6px;
+    font-size:11px;
+    color:#666;
+}
+
+#alertPanel{
+    margin-top:8px;
+    padding:8px;
+    border-radius:8px;
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+}
+#alertTitle{
+    font-weight:bold;
+    font-size:12px;
+    color:#9a3412;
+    margin-bottom:6px;
+}
+#alertList{
+    font-size:12px;
+    color:#3f3f46;
+}
+#alertList .alert-title-en{
+    font-size:12px;
+    color:#111827;
+}
+#alertList .alert-title-cn{
+    font-size:12px;
+    color:#2563eb;
+}
+#alertList ul{
+    margin:6px 0 0 16px;
+    padding:0;
+}
+.alert-tag{
+    display:inline-block;
+    padding:2px 6px;
+    border-radius:6px;
+    font-size:11px;
+    background:#fee2e2;
+    color:#991b1b;
+    margin-right:6px;
+}
+.alert-meta{
+    font-size:11px;
+    color:#6b7280;
+    margin-top:6px;
+}
+
+.macro-tag-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:6px;
+}
+.macro-tag{
+    border:none;
+    background:#eef2ff;
+    color:#1e3a8a;
+    padding:4px 8px;
+    border-radius:6px;
+    font-size:11px;
+    cursor:pointer;
+}
+.macro-tag:hover{
+    background:#c7d2fe;
+}
+
+.macro-layout{
+    display:grid;
+    grid-template-columns:1.3fr 1fr;
+    gap:10px;
+    align-items:start;
+}
+
+.panel-collapsed{
+    display:none !important;
+}
+
+#macroPanel {
+    overflow: hidden;
+    max-height: 5000px;
+    transition: max-height 0.35s ease, opacity 0.35s ease, visibility 0s linear 0.35s; /* 延迟 visibility */
+    will-change: max-height, opacity; /* 优化性能 */
+}
+
+#macroPanel.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;      /* 防止残留区域还能点 */
+    height: 0 !important;      /* 强制高度归零 */
+    padding: 0 !important;     /* 清除内边距 */
+    margin: 0 !important;      /* 清除外边距 */
+}
+
+/* 展开时立即可见 */
+#macroPanel:not(.collapsed) {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s; /* 展开时立即显示 */
+}
+
+.signal{
+    display:inline-block;
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    margin-right:6px;
+}
+.green{background:#00ff90;}
+.yellow{background:#ffd000;}
+.red{background:#ff4040;}
+
+#translate-panel,
+#news-panel{
+    display:none;
+    border-top:1px solid #eee;
+    flex:1;
+    min-height:70dvh;
+}
+#translate-panel iframe,
+#news-panel iframe{
+    width:100%;
+    height:100dvh;
+    border:0;
+}
+
+#back-to-quotes{
+    position:fixed;
+    right:12px;
+    bottom:12px;
+    z-index:20;
+    background:#111827;
+    color:#fff;
+    border:none;
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:12px;
+    display:none;
+}
+
+
+@media (max-width: 900px){
+    body{
+        overflow:auto;
+    }
+    .main{
+        flex:initial;
+        min-height:100dvh;
+    }
+    .control-panel{
+        max-height:none;
+        overflow:visible;
+    }
+    #macroPanel .macro-layout{
+        grid-template-columns:1fr;
+    }
+    .chart-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+    .quote-tile{
+        height:60px;
+        padding:6px;
+    }
+    .quote-label{
+        font-size:11px;
+    }
+    .quote-tile .tradingview-widget-container{
+        transform:scale(0.8);
+        transform-origin:left center;
+    }
+    #chart-wrap{
+        min-height:70dvh;
+    }
+    #translate-panel,
+    #news-panel{
+        min-height:70dvh;
+    }
+}
+
+@media (max-width: 600px){
+    .control-panel{
+        max-height:none;
+        overflow:visible;
+    }
+    #macroPanel .macro-layout{
+        grid-template-columns:1fr;
+    }
+    .quote-tile{
+        height:56px;
+    }
+    .quote-label{
+        font-size:10px;
+    }
+    .quote-tile .tradingview-widget-container{
+        transform:scale(0.7);
+        transform-origin:left center;
+    }
+    #chart-wrap{
+        min-height:100dvh;
+        height:100dvh;
+    }
+    #translate-panel,
+    #news-panel{
+        min-height:100dvh;
+        height:100dvh;
+    }
+}
+
+#rsiMonitorPanel{
+    margin-top:8px;
+    padding:8px;
+    border-radius:8px;
+    background:#f0fdf4;
+    border:1px solid #bbf7d0;
+}
+#rsiMonitorPanel.collapsed{
+    display:none;
+}
+#rsiMonitorTitle{
+    font-weight:bold;
+    font-size:12px;
+    color:#166534;
+    margin-bottom:6px;
+}
+.rsi-monitor-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+}
+.rsi-symbol-card{
+    background:#fff;
+    border-radius:6px;
+    padding:8px;
+    border:1px solid #e5e7eb;
+}
+.rsi-symbol-header{
+    font-weight:600;
+    font-size:12px;
+    color:#374151;
+    margin-bottom:6px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.rsi-symbol-header .alert-badge{
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:10px;
+    font-weight:bold;
+}
+.rsi-symbol-header .alert-badge.oversold{
+    background:#dcfce7;
+    color:#166534;
+}
+.rsi-symbol-header .alert-badge.overbought{
+    background:#fee2e2;
+    color:#991b1b;
+}
+.rsi-symbol-header .alert-badge.resonance{
+    background:#fef08a;
+    color:#854d0e;
+    animation:pulse 1s infinite;
+}
+@keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.5;}
+}
+.rsi-timeframe-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+    padding:3px 0;
+    border-bottom:1px dashed #f3f4f6;
+}
+.rsi-timeframe-row:last-child{
+    border-bottom:none;
+}
+.rsi-tf-label{
+    color:#6b7280;
+}
+.rsi-tf-value{
+    font-weight:600;
+}
+.rsi-tf-value.oversold{
+    color:#16a34a;
+}
+.rsi-tf-value.overbought{
+    color:#dc2626;
+}
+.rsi-tf-value.neutral{
+    color:#374151;
+}
+.rsi-update-time{
+    font-size:10px;
+    color:#9ca3af;
+    margin-top:6px;
+    text-align:right;
+}
+</style></head><body><div class="main">
+
+<div class="control-panel">
+
+    <div class="chart-grid" id="quote-grid"></div>
+
+    <div class="action-row">
+        <input type="text" id="stock-search" placeholder="自定义代码 如 BTCUSDT / 600519" style="flex:1;">
+        <button onclick="updateStockChart()"
+        style="background:#4a90e2;color:#fff;border:none;padding:0 15px;border-radius:8px;">
+        check
+        </button>
+        <button onclick="toggleTranslate()"
+        style="background:#8B0000;color:#fff;border:none;padding:0 12px;border-radius:8px;">
+        war
+        </button>
+        <button onclick="toggleNews()"
+        style="background:#ff6a00;color:#fff;border:none;padding:0 12px;border-radius:8px;">
+        news
+        </button>
+        <button onclick="macroCheck()"
+        style="background:#f59e0b;color:#fff;border:none;padding:0 12px;border-radius:8px;">
+        Mac
+        </button>
+        <button id="quoteToggleBtn" onclick="toggleQuoteGrid()"
+        style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        折叠报价
+        </button>
+        <button id="chartToggleBtn" onclick="toggleChartWrap()"
+        style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        折叠图表
+        </button>
+        <button id="macroDataToggleBtn" onclick="toggleSubPanel('macroDataPanel','macroDataToggleBtn','收起宏观','展开宏观')"
+        style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        展开宏观
+        </button>
+        <button id="alertToggleBtn" onclick="toggleSubPanel('alertPanel','alertToggleBtn','收起预警','展开预警')"
+        style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        展开预警
+        </button>
+        <button onclick="copyMacro()"
+        style="background:#0f766e;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        复制
+        </button>
+        <button onclick="shareHighImpactAlertsImage()"
+        style="background:#b45309;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        分享预警
+        </button>
+        <button id="drawToggleBtn" onclick="toggleDrawMode()"
+        style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        draw
+        </button>
+        <button id="rsiMonitorToggleBtn" onclick="toggleRsiMonitor()"
+        style="background:#166534;color:#fff;border:none;padding:0 10px;border-radius:8px;">
+        收起RSI
+        </button>
+    </div>
+
+        <div id="macroPanel">
+            <div class="macro-layout">
+                <div id="macroDataPanel" class="macro-left panel-collapsed">
+                    <div id="macroLight">刷新宏观信号</div>
+                    <div id="macroAdvice"></div>
+                    <div id="macroMeta"></div>
+                </div>
+                <div id="alertPanel" class="panel-collapsed">
+                    <div id="alertTitle">宏观预警</div>
+                    <div id="alertList">等待数据...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="rsiMonitorPanel">
+            <div id="rsiMonitorTitle">RSI多周期监控 <span style="font-weight:normal;font-size:10px;color:#6b7280;">(每5分钟更新)</span></div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
+                <input type="text" id="rsi-custom-symbol" placeholder="输入代码如 XAUUSD" style="flex:1;padding:4px 8px;border-radius:4px;border:1px solid #d1d5db;font-size:11px;">
+                <button onclick="addCustomRsiSymbol()" style="background:#166534;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;">添加</button>
+                <button onclick="showRsiEmailConfig()" style="background:#3b82f6;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;">📧 邮件配置</button>
+            </div>
+            <div id="rsi-email-config-panel" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px;margin-bottom:8px;">
+                <div style="font-size:11px;font-weight:bold;color:#0369a1;margin-bottom:6px;">📧 RSI邮件提醒配置</div>
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                    <input type="email" id="rsi-email-address" placeholder="输入邮箱地址" style="flex:1;padding:4px 8px;border-radius:4px;border:1px solid #d1d5db;font-size:11px;">
+                    <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#374151;">
+                        <input type="checkbox" id="rsi-email-enabled" style="margin:0;">
+                        启用
+                    </label>
+                </div>
+                <div style="font-size:10px;color:#6b7280;">当1小时RSI触及30以下或70以上时发送邮件提醒（包含所有周期RSI值）</div>
+                <button onclick="saveRsiEmailConfig()" style="margin-top:6px;background:#0ea5e9;color:#fff;border:none;padding:4px 12px;border-radius:4px;font-size:11px;width:100%;">保存配置</button>
+            </div>
+            <div class="rsi-monitor-grid" id="rsi-monitor-grid">
+                <div class="rsi-symbol-card" id="rsi-btcusd">
+                    <div class="rsi-symbol-header">
+                        <a href="javascript:void(0)" onclick="loadChart('BTCUSD')" style="color:#374151;text-decoration:none;cursor:pointer;">BTCUSD</a>
+                        <span class="alert-badge" id="btcusd-alert"></span>
+                    </div>
+                    <div class="rsi-timeframe-row"><span class="rsi-tf-label">30分钟</span><span class="rsi-tf-value" id="btcusd-30m">--</span></div>
+                    <div class="rsi-timeframe-row"><span class="rsi-tf-label">1小时</span><span class="rsi-tf-value" id="btcusd-1h">--</span></div>
+                    <div class="rsi-timeframe-row"><span class="rsi-tf-label">4小时</span><span class="rsi-tf-value" id="btcusd-4h">--</span></div>
+                    <div class="rsi-timeframe-row"><span class="rsi-tf-label">日线</span><span class="rsi-tf-value" id="btcusd-1d">--</span></div>
+                    <div class="rsi-timeframe-row"><span class="rsi-tf-label">周线</span><span class="rsi-tf-value" id="btcusd-1w">--</span></div>
+                    <div class="rsi-timeframe-row"><span class="rsi-tf-label">月线</span><span class="rsi-tf-value" id="btcusd-1M">--</span></div>
+                    <div class="rsi-update-time" id="btcusd-time">--</div>
+                </div>
+                <div class="rsi-symbol-card" id="rsi-ukoil">
+                <div class="rsi-symbol-header">
+                    <a href="javascript:void(0)" onclick="loadChart('UKOIL')" style="color:#374151;text-decoration:none;cursor:pointer;">UKOIL</a>
+                    <span class="alert-badge" id="ukoil-alert"></span>
+                </div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">30分钟</span><span class="rsi-tf-value" id="ukoil-30m">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">1小时</span><span class="rsi-tf-value" id="ukoil-1h">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">4小时</span><span class="rsi-tf-value" id="ukoil-4h">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">日线</span><span class="rsi-tf-value" id="ukoil-1d">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">周线</span><span class="rsi-tf-value" id="ukoil-1w">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">月线</span><span class="rsi-tf-value" id="ukoil-1M">--</span></div>
+                <div class="rsi-update-time" id="ukoil-time">--</div>
+            </div>
+            <div class="rsi-symbol-card" id="rsi-xauusd">
+                <div class="rsi-symbol-header">
+                    <a href="javascript:void(0)" onclick="loadChart('XAUUSD')" style="color:#374151;text-decoration:none;cursor:pointer;">XAUUSD</a>
+                    <span class="alert-badge" id="xauusd-alert"></span>
+                </div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">30分钟</span><span class="rsi-tf-value" id="xauusd-30m">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">1小时</span><span class="rsi-tf-value" id="xauusd-1h">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">4小时</span><span class="rsi-tf-value" id="xauusd-4h">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">日线</span><span class="rsi-tf-value" id="xauusd-1d">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">周线</span><span class="rsi-tf-value" id="xauusd-1w">--</span></div>
+                <div class="rsi-timeframe-row"><span class="rsi-tf-label">月线</span><span class="rsi-tf-value" id="xauusd-1M">--</span></div>
+                <div class="rsi-update-time" id="xauusd-time">--</div>
+            </div>
+            </div>
+        </div>
+
+</div>
+
+<div id="chart-wrap">
+    <div id="stock-chart-container"></div>
+    <div id="cycle-bar">
+        <div class="cycle-btn" onclick="setCycle('240', this)">4小时</div>
+        <div class="cycle-btn" onclick="setCycle('D', this)">日</div>
+        <div class="cycle-btn" onclick="setCycle('W', this)">周</div>
+        <div class="cycle-btn" onclick="setCycle('M', this)">月</div>
+        <div class="cycle-btn" onclick="setRange('ytd', this)">YTD</div>
+        <div class="cycle-btn" onclick="setRange('12m', this)">年</div>
+        <div class="cycle-btn" onclick="setRange('60m', this)">5年</div>
+        <div class="cycle-btn" onclick="setRange('all', this)">全部</div>
+    </div>
+</div>
+<div id="translate-panel">
+    <iframe id="translate-frame" src="https://iran.immersivetranslate.com/zh-CN/"></iframe>
+</div>
+<div id="news-panel">
+    <iframe id="news-frame" src="https://www.jin10.com/"></iframe>
+</div>
+
+
+</div><button id="back-to-quotes" onclick="backToQuotes()">回到报价</button>
+<script>
+let widget;
+let currentSymbol = "BTCUSD";
+let currentInterval = "240";
+let currentRange = null;
+let quoteObserver = null;
+
+const DATA_SOURCE = {
+    provider: "twelvedata",
+    useProxy: true,
+    proxyUrl: "https://hg-inve3.wubairan.workers.dev",
+    apiKey: "9739029be2174a14a23485c91380abe3"
+};
+
+const MACRO_THRESHOLDS = {
+    copperOilRecovery: 3.0,
+    goldOilStagflation: 20.0,
+    copperOilStagflation: 2.5,
+    copperOilRecession: 2.0,
+    us10yRecovery: 4.5,
+    us10yOverheat: 4.8,
+    us10yFastDrop: 0.10
+};
+
+const quickSymbols = [
+    { label: "USDCNY", symbol: "USDCNY" },
+    { label: "JPYCNY", symbol: "JPYCNY" },
+    { label: "BTCUSD", symbol: "BTCUSD" },
+    { label: "金币比", symbol: "XAUUSD/BTCUSD" },
+    { label: "US10Y", symbol: "US10Y" },
+    { label: "US02Y", symbol: "US02Y" },
+    { label: "DXY", symbol: "DXY" },
+    { label: "SP500", symbol: "SP500" },
+    { label: "XAUUSD", symbol: "XAUUSD" },
+    { label: "COPPER", symbol: "COPPER" },
+    { label: "UKOIL", symbol: "UKOIL" },
+    { label: "USOIL", symbol: "USOIL" },
+    { label: "股油比", symbol: "SP500/WTI" },
+    { label: "铜油比", symbol: "COPPER/WTI" },
+    { label: "金油比", symbol: "XAUUSD/WTI" },
+    { label: "VIX", symbol: "VIX", displaySymbol: "VIX", type: "tv" },
+    { label: "HY利差", symbol: "BAMLH0A0HYM2" },
+    { label: "通胀预期", symbol: "FRED:T5YIE" }
+];
+
+const tvSymbolMap = {
+    "XAUUSD": "XAUUSD",
+    "COPPER": "COPPER",
+    "UKOIL": "UKOIL",
+    "SP500/WTI": "SP500/WTI",
+    "COPPER/WTI": "COPPER/WTI",
+    "XAUUSD/WTI": "XAUUSD/WTI",
+    "US10Y": "US10Y",
+    "US02Y": "US02Y",
+    "DXY": "DXY",
+    "BTCUSD": "BTCUSD",
+    "XAUUSD/BTCUSD": "XAUUSD/BTCUSD",
+    "USDCNY": "USDCNY",
+    "JPYCNY": "JPYCNY",
+    "USOIL": "USOIL",
+    "UKOIL": "UKOIL",
+    "COPPER": "COPPER",
+    "QQQ/SPY": "QQQ/SPY",
+    "IWM/SPY": "IWM/SPY",
+    "HYG/IEF": "HYG/IEF",
+    "SMH": "SMH",
+    "XES": "XES",
+    "GRID": "GRID"
+    ,"VIX": "VIX"
+    ,"BAMLH0A0HYM2": "BAMLH0A0HYM2"
+};
+
+function appendSingleQuoteWidget(container, symbol){
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+        symbol: normalizeChartSymbol(symbol),
+        width: "100%",
+        colorTheme: "light",
+        isTransparent: true,
+        locale: "zh_CN",
+        showSymbolLogo: false,
+        fontSize: "1"
+    });
+    container.appendChild(script);
+}
+
+function renderQuoteGrid(){
+    const grid = document.getElementById("quote-grid");
+    grid.innerHTML = "";
+
+    quickSymbols.forEach(item => {
+        const tile = document.createElement("div");
+        tile.className = "quote-tile";
+        const label = document.createElement("div");
+        label.className = "quote-label";
+        label.textContent = item.label;
+
+        let widgetWrap;
+        if (item.type === "manual"){
+            widgetWrap = document.createElement("div");
+            widgetWrap.className = "manual-quote";
+            widgetWrap.style.flex = "1";
+            widgetWrap.style.display = "flex";
+            widgetWrap.style.alignItems = "center";
+            widgetWrap.style.justifyContent = "flex-end";
+            widgetWrap.style.fontSize = "12px";
+            widgetWrap.style.color = "#111827";
+            widgetWrap.dataset.symbol = item.symbol;
+            if (item.displaySymbol){
+                widgetWrap.dataset.displaySymbol = item.displaySymbol;
+            }
+            widgetWrap.textContent = "--";
+        } else {
+            widgetWrap = document.createElement("div");
+            widgetWrap.className = "tradingview-widget-container";
+            widgetWrap.style.height = "100%";
+            widgetWrap.style.flex = "1";
+
+            const widgetTarget = document.createElement("div");
+            widgetTarget.className = "tradingview-widget-container__widget";
+            widgetTarget.style.height = "100%";
+
+            widgetWrap.appendChild(widgetTarget);
+            widgetWrap.dataset.symbol = item.symbol;
+            widgetWrap.classList.add("lazy-quote");
+        }
+
+        const click = document.createElement("div");
+        click.className = "quote-click";
+        click.onclick = () => {
+            if (item.type === "manual") return;
+            loadChart(item.symbol);
+        };
+
+        tile.appendChild(label);
+        tile.appendChild(widgetWrap);
+        tile.appendChild(click);
+        grid.appendChild(tile);
+    });
+}
+
+function initQuoteObserver(){
+    const lazyQuotes = Array.from(document.querySelectorAll(".lazy-quote"));
+    if (!("IntersectionObserver" in window)){
+        lazyQuotes.forEach(el => {
+            if (!el.dataset.loaded){
+                const sym = el.dataset.displaySymbol || el.dataset.symbol;
+                appendSingleQuoteWidget(el, sym);
+                el.dataset.loaded = "1";
+            }
+        });
+        return;
+    }
+    if (quoteObserver) quoteObserver.disconnect();
+    quoteObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting){
+                const el = entry.target;
+                if (!el.dataset.loaded){
+                    const sym = el.dataset.displaySymbol || el.dataset.symbol;
+                    appendSingleQuoteWidget(el, sym);
+                    el.dataset.loaded = "1";
+                }
+                quoteObserver.unobserve(el);
+            }
+        });
+    }, { root: null, rootMargin: "100px", threshold: 0.1 });
+
+    lazyQuotes.forEach(el => quoteObserver.observe(el));
+}
+
+function updateManualQuotes(data){
+    const map = {
+        "MANUAL:T5Y5Y": data && data.t5y5y != null ? data.t5y5y : null
+    };
+    const nodes = Array.from(document.querySelectorAll(".manual-quote"));
+    nodes.forEach(node => {
+        const key = node.dataset.symbol;
+        const val = map[key];
+        node.textContent = (val != null && Number.isFinite(val)) ? val.toFixed(2) : "--";
+    });
+}
+
+function loadChart(symbol){
+    const normalized = normalizeChartSymbol(symbol);
+    document.getElementById('stock-search').value = normalized;
+    updateStockChart(normalized);
+}
+
+function normalizeChartSymbol(symbol){
+    const raw = String(symbol || "").trim().toUpperCase();
+    if (!raw) return "";
+    if (tvSymbolMap[raw]) return tvSymbolMap[raw];
+    if (raw.includes(":")) return raw;
+
+    const ssMatch = raw.match(/^(\d{6})\.(SS|SH|SSE)$/);
+    if (ssMatch) return `SSE:${ssMatch[1]}`;
+    const szMatch = raw.match(/^(\d{6})\.(SZ|SZSE)$/);
+    if (szMatch) return `SZSE:${szMatch[1]}`;
+    const bseMatch = raw.match(/^(\d{6})\.(BJ|BSE)$/);
+    if (bseMatch) return `BSE:${bseMatch[1]}`;
+
+    const shPrefix = raw.match(/^SH(\d{6})$/);
+    if (shPrefix) return `SSE:${shPrefix[1]}`;
+    const szPrefix = raw.match(/^SZ(\d{6})$/);
+    if (szPrefix) return `SZSE:${szPrefix[1]}`;
+    const bjPrefix = raw.match(/^BJ(\d{6})$/);
+    if (bjPrefix) return `BSE:${bjPrefix[1]}`;
+
+    if (/^\d{6}$/.test(raw)){
+        if (/^[569]/.test(raw) || /^(600|601|603|605|688|689)/.test(raw)) return `SSE:${raw}`;
+        if (/^[0123]/.test(raw) || /^(000|001|002|003|300|301)/.test(raw)) return `SZSE:${raw}`;
+        if (/^(4|8)/.test(raw)) return `BSE:${raw}`;
+    }
+
+    return raw;
+}
+
+function updateStockChart(symbolInput){
+
+    const symbol = normalizeChartSymbol(symbolInput ||
+                   document.getElementById('stock-search').value ||
+                   "XAUUSD/UKOIL");
+    currentSymbol = symbol;
+
+    document.getElementById('stock-chart-container').innerHTML = '';
+
+    widget = new TradingView.widget({
+        autosize:true,
+        symbol: symbol,
+        interval: currentInterval,
+        range: currentRange || undefined,
+        timezone:"Etc/UTC",
+        theme:"light",
+        style:"1",
+        locale:"zh_CN",
+
+        toolbar_bg:"#f1f3f6",
+        enable_publishing:false,
+
+        hide_top_toolbar:false,
+        hide_side_toolbar:false,
+        hide_legend:false,
+
+        save_image:true,
+
+        container_id:"stock-chart-container",
+        studies: [
+            { id: "RSI@tv-basicstudies" },
+            { id: "MASimple@tv-basicstudies", inputs: { length: 21 } },
+            { id: "MASimple@tv-basicstudies", inputs: { length: 120 } },
+            { id: "MASimple@tv-basicstudies", inputs: { length: 250 } }
+        ],
+        studies_overrides: {
+            "RSI.rsi.linewidth": 2,
+            "RSI.rsi.color": "#7B1FA2",
+            "moving average.ma.linestyle": 2,
+            "moving average.ma.linewidth": 1,
+            "moving average.ma.color": "#808080",
+            "moving average_1.ma.linestyle": 2,
+            "moving average_1.ma.linewidth": 1,
+            "moving average_1.ma.color": "#0000FF",
+            "moving average_2.ma.linestyle": 0,
+            "moving average_2.ma.linewidth": 2,
+            "moving average_2.ma.color": "#FF0000"
+        }
+    });
+
+}
+
+function highlightButton(btn){
+    document.querySelectorAll('.cycle-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+
+function setCycle(cycle, btn){
+    currentInterval = cycle;
+    currentRange = null;
+    updateStockChart(currentSymbol);
+    highlightButton(btn);
+}
+
+function setRange(type, btn){
+    if (type === "ytd") currentRange = "YTD";
+    if (type === "12m") currentRange = "12M";
+    if (type === "60m") currentRange = "60M";
+    if (type === "all") currentRange = "ALL";
+    updateStockChart(currentSymbol);
+    highlightButton(btn);
+}
+
+function buildStrategy(stage, ctx){
+    const copperLine = ctx.copperTrend === "上升"
+        ? "铜油比上升 → 工业需求增强"
+        : ctx.copperTrend === "下降"
+            ? "铜油比下降 → 工业需求走弱"
+            : "铜油比持平 → 需求信号不明";
+
+    const stockLine = ctx.stockTrend === "上升"
+        ? "股油比上升 → 企业利润改善"
+        : ctx.stockTrend === "下降"
+            ? "股油比下降 → 企业利润压力增加"
+            : "股油比持平 → 利润信号不明";
+
+    const goldLine = ctx.goldTrend === "上升"
+        ? "金油比上升 → 避险/通胀压力"
+        : ctx.goldTrend === "下降"
+            ? "金油比下降 → 风险偏好改善"
+            : ctx.goldTrend === "N/A"
+                ? "金油比无数据"
+                : "金油比持平 → 风险信号不明";
+
+    const vixLine = ctx.vix == null
+        ? "VIX 无数据"
+        : ctx.vix > 35
+            ? "VIX 高位 → 恐慌阶段"
+            : ctx.vix > 25
+                ? "VIX 上升 → 风险情绪偏高"
+                : "VIX 稳定 → 风险情绪温和";
+
+    const hyLine = ctx.hy == null
+        ? "HY 利差无数据"
+        : ctx.hy > 7
+            ? "HY 利差高位 → 金融风险上升"
+            : ctx.hy > 5
+                ? "HY 利差扩大 → 信用压力增加"
+                : "HY 利差稳定 → 金融压力有限";
+
+    if (stage === "复苏"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
+            <div>交易建议：</div>
+            <ul>
+                <li>做多：SP500、NASDAQ、工业金属、小盘股</li>
+                <li>做空：黄金、美元</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>股票 70%</li>
+                <li>商品 20%</li>
+                <li>现金 10%</li>
+            </ul>`;
+    }
+    if (stage === "扩张"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
+            <div>交易建议：</div>
+            <ul>
+                <li>做多：科技股、周期股、铜、新兴市场</li>
+                <li>减持：债券、黄金</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>股票 80%</li>
+                <li>商品 10%</li>
+                <li>现金 10%</li>
+            </ul>`;
+    }
+    if (stage === "扩张后期"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
+            <div>交易建议：</div>
+            <ul>
+                <li>做多：能源、价值股、黄金</li>
+                <li>减少：成长股、小盘股</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>股票 50%</li>
+                <li>能源 20%</li>
+                <li>黄金 20%</li>
+                <li>现金 10%</li>
+            </ul>`;
+    }
+    if (stage === "滞胀"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
+            <div>交易建议：</div>
+            <ul>
+                <li>做多：黄金、能源、大宗商品</li>
+                <li>做空：科技股、债券</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>黄金 35%</li>
+                <li>能源 35%</li>
+                <li>股票 20%</li>
+                <li>现金 10%</li>
+            </ul>`;
+    }
+    if (stage === "衰退"){
+        return `
+            <div>${copperLine}</div>
+            <div>${stockLine}</div>
+            <div>${goldLine}</div>
+            <div>${vixLine}</div>
+            <div>${hyLine}</div>
+            <div>交易建议：</div>
+            <ul>
+                <li>做多：美债、黄金、美元</li>
+                <li>做空：股票、工业金属</li>
+            </ul>
+            <div>建议组合：</div>
+            <ul>
+                <li>债券 50%</li>
+                <li>黄金 25%</li>
+                <li>现金 25%</li>
+            </ul>`;
+    }
+    return `
+        <div>${copperLine}</div>
+        <div>${stockLine}</div>
+        <div>${goldLine}</div>
+        <div>${vixLine}</div>
+        <div>${hyLine}</div>
+        <div>策略：</div>
+        <ul>
+            <li>降低杠杆</li>
+            <li>维持均衡配置</li>
+        </ul>`;
+}
+
+function buildChinaAllocation(stage, liquidityState){
+    const liqNote = liquidityState ? `（流动性：${liquidityState}）` : "";
+    if (stage === "复苏"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>周期股</li>
+                <li>有色</li>
+                <li>机械</li>
+                <li>券商</li>
+            </ul>`;
+    }
+    if (stage === "扩张"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>新能源</li>
+                <li>科技成长</li>
+                <li>消费升级</li>
+            </ul>`;
+    }
+    if (stage.indexOf("扩张后期") === 0){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>能源</li>
+                <li>煤炭</li>
+                <li>油气</li>
+                <li>高股息央企</li>
+            </ul>`;
+    }
+    if (stage === "滞胀"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>资源股</li>
+                <li>黄金</li>
+                <li>防御股</li>
+            </ul>`;
+    }
+    if (stage === "衰退"){
+        return `
+            <div><strong>A股配置建议${liqNote}：</strong></div>
+            <ul>
+                <li>医药</li>
+                <li>高股息</li>
+                <li>现金</li>
+            </ul>`;
+    }
+    return `
+        <div><strong>A股配置建议${liqNote}：</strong></div>
+        <ul>
+            <li>均衡配置</li>
+        </ul>`;
+}
+
+function buildTurningPoints(flags){
+    const lines = [];
+    if (flags.stagflationTurn) lines.push("滞胀拐点：油价上行+铜走弱+通胀预期抬升");
+    if (flags.recessionTurn) lines.push("衰退拐点：铜油比下行+信用/波动上升");
+    if (flags.commodityTop) lines.push("大宗周期顶：油高位+铜转弱+美元走强");
+    if (!lines.length) lines.push("暂无明确拐点信号");
+    return `
+        <div><strong>拐点提示：</strong></div>
+        <ul>
+            ${lines.map(l => `<li>${l}</li>`).join("")}
+        </ul>`;
+}
+
+function buildOilStressChina(oilStress){
+    if (!oilStress || oilStress.level == null) return "";
+    if (oilStress.level === 2){
+        return `
+            <div><strong>油价冲击配置：</strong></div>
+            <ul>
+                <li>增加：能源、煤炭、资源股</li>
+                <li>减少：高估值成长</li>
+            </ul>`;
+    }
+    if (oilStress.level === 3){
+        return `
+            <div><strong>油价冲击配置：</strong></div>
+            <ul>
+                <li>降低风险资产</li>
+                <li>增加：黄金、高股息央企、现金</li>
+            </ul>`;
+    }
+    return "";
+}
+
+function buildOilStressModule(oilStress, oilDate, brentDate, brentFut, brentFutDate){
+    if (!oilStress){
+        return `<div><strong>能源压力等级：</strong>N/A</div>`;
+    }
+    
+    const level = oilStress.level != null ? oilStress.level : "N/A";
+    const brent = oilStress.brent != null ? oilStress.brent.toFixed(2) : "N/A";
+    const wti = oilStress.wti != null ? oilStress.wti.toFixed(2) : "N/A";
+    const spread = oilStress.spread != null ? oilStress.spread.toFixed(2) : "N/A";
+    const days = oilStress.brentAbove115Days != null ? oilStress.brentAbove115Days : "N/A";
+    const wtiT90 = (oilStress.spread != null) ? (90 - oilStress.spread).toFixed(2) : "N/A";
+    const wtiT100 = (oilStress.spread != null) ? (100 - oilStress.spread).toFixed(2) : "N/A";
+    const wtiT115 = (oilStress.spread != null) ? (115 - oilStress.spread).toFixed(2) : "N/A";
+
+    let explain = "油价中性，通胀压力有限。";
+    if (oilStress.level === 1) explain = "油价进入通胀压力区，能源成本推高CPI。";
+    if (oilStress.level === 2) explain = "油价进入增长压制区，企业利润承压。";
+    if (oilStress.level === 3) explain = "油价进入需求破坏区，滞胀风险上升。";
+    if (oilStress.level == null) explain = "数据缺失，无法判断油价压力等级。";
+
+    return `
+        <div><strong>能源压力等级：</strong>${level}</div>
+        <div>Brent（EIA spot）：${brent}${brentDate ? `（${brentDate}）` : ""}｜WTI：${wti}${oilDate ? `（${oilDate}）` : ""}｜Spread：${spread}</div>
+        <div style="font-size:11px;color:#6b7280;">提示：Brent=全球基准油价（宏观），WTI=交易参考（盘面）。</div>
+        <div>WTI阈值估算：90→${wtiT90} / 100→${wtiT100} / 115→${wtiT115}</div>
+        <div style="font-size:11px;color:#6b7280;">
+            含义：当 WTI≥${wtiT90}，相当于 Brent≈90（通胀压力区）；<br>
+            当 WTI≥${wtiT100}，相当于 Brent≈100（增长压制区）；<br>
+            当 WTI≥${wtiT115}，相当于 Brent≈115（需求破坏风险区）
+        </div>
+        <div style="font-size:11px;color:#6b7280;">
+            说明：阈值判断以 Brent 现货（EIA spot）为宏观基准，仅用于宏观参考。
+        </div>
+        <div>Brent≥115天数：${days}</div>
+        <div>${explain}</div>
+        <div style="font-size:11px;color:#6b7280;">期货价格仅作行情参考，不参与宏观评分。</div>`;
+}
+
+function buildEventImpact(){
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const newsText = newsAlerts.map(a => typeof a === "string" ? a : (a.title || "")).join(" ");
+    const marketText = marketAlerts.join(" ");
+    const text = (newsText + " " + marketText).toLowerCase();
+
+    const hasWar = text.includes("war") || text.includes("战争") || text.includes("冲突") || text.includes("iran") || text.includes("中东");
+    const hasOilShock = text.includes("oil") || text.includes("油价") || text.includes("能源");
+    const hasRate = text.includes("rate") || text.includes("加息") || text.includes("hike");
+
+    const lines = [];
+    if (hasWar || hasOilShock){
+        lines.push("地缘/能源扰动 → 短期利好能源与黄金，利空航空/高耗能行业");
+    }
+    if (hasRate){
+        lines.push("利率收紧 → 成长股承压，现金与短债相对占优");
+    }
+    if (!lines.length){
+        lines.push("暂无显著事件冲击信号");
+    }
+
+    return `<div><strong>事件影响：</strong>${lines.join("；")}</div>`;
+}
+
+function getEventScore(){
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const newsText = newsAlerts.map(a => typeof a === "string" ? a : (a.title || "")).join(" ");
+    const marketText = marketAlerts.join(" ");
+    const text = (newsText + " " + marketText).toLowerCase();
+
+    const hasWar = text.includes("war") || text.includes("战争") || text.includes("冲突") || text.includes("iran") || text.includes("中东");
+    const hasOilShock = text.includes("oil") || text.includes("油价") || text.includes("能源");
+    const hasRate = text.includes("rate") || text.includes("加息") || text.includes("hike");
+
+    let eventScore = 0;
+    if (hasWar) eventScore -= 1;
+    if (hasOilShock) eventScore -= 1;
+    if (hasRate) eventScore -= 1;
+    return eventScore;
+}
+
+function buildConsistencyCheck(stage, ctx){
+    const warns = [];
+    if (stage === "滞胀" || stage === "衰退"){
+        if (ctx.goldOilTrend !== "上升" && ctx.oilTrend !== "上升"){
+            warns.push("黄金/油价未确认避险或通胀压力");
+        }
+    }
+    if (stage === "复苏" || stage === "扩张"){
+        if (ctx.copperOilTrend !== "上升" && ctx.stockOilTrend !== "上升"){
+            warns.push("铜油比/股油比未确认扩张");
+        }
+    }
+    if (!warns.length){
+        return `<div><strong>一致性检查：</strong>宏观信号与市场价格一致。</div>`;
+    }
+    return `<div><strong>一致性检查：</strong>${warns.join("；")}。</div>`;
+}
+
+function trendLabel(current, ma){
+    if (current == null || ma == null || !Number.isFinite(current) || !Number.isFinite(ma)) return "N/A";
+    const diff = (current - ma) / ma;
+    if (diff > 0.01) return "上升";
+    if (diff < -0.01) return "下降";
+    return "持平";
+}
+
+async function macroCheck(){
+    const metaEl = document.getElementById("macroMeta");
+    metaEl.textContent = "正在获取数据...";
+
+    if (!DATA_SOURCE.proxyUrl){
+        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
+        document.getElementById("macroAdvice").innerHTML = `缺少代理地址，请设置 Worker URL。`;
+        const now = new Date();
+        metaEl.textContent = `更新时间：${now.toLocaleString()}`;
+        return;
+    }
+
+    let data;
+    const loadCachedMacro = () => {
+        const cachedRaw = localStorage.getItem("macro_cache_last");
+        if (!cachedRaw) return null;
+        try{
+            const cached = JSON.parse(cachedRaw);
+            if (cached && cached.status === "ok"){
+                cached.__localCache = true;
+                return cached;
+            }
+        }catch{}
+        return null;
+    };
+    try{
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=macro`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        data = await res.json();
+    }catch(err){
+        data = loadCachedMacro();
+        if (!data){
+            document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>获取失败`;
+            const msg = String(err).includes("AbortError") ? "宏观接口超时，请稍后重试。" : `宏观接口异常：${String(err)}`;
+            document.getElementById("macroAdvice").innerHTML = msg;
+            metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+            return;
+        }
+    }
+    if (!data || data.status !== "ok"){
+        const cached = loadCachedMacro();
+        if (cached){
+            data = cached;
+        } else {
+        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>数据缺失`;
+        document.getElementById("macroAdvice").innerHTML = data && data.message ? data.message : `请检查代理或数据源。`;
+        const now = new Date();
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+        const oilDate = data.oilDate || "";
+        const brentDate = data.brentDate || "";
+        const dateMatched = (oilDate && oilDate === todayKey) || (brentDate && brentDate === todayKey);
+        const statusText = data.__localCache
+            ? "本地缓存"
+            : (dateMatched ? "今日已更新" : "使用缓存/延迟数据");
+        const dateText = (oilDate || brentDate) ? `数据日期：${oilDate || brentDate}` : "数据日期：N/A";
+        metaEl.textContent = `更新时间：${now.toLocaleString()} ｜ ${statusText} ｜ ${dateText}`;
+        return;
+        }
+    }
+
+    localStorage.setItem("macro_cache_last", JSON.stringify(data));
+
+    try{
+    updateManualQuotes(data);
+    const {
+        gold, oil, brent, oilStress, copper, us10y, dxy, btc, sp500,
+        t5y5y, real10y, walcl, us2y,
+        dxyPrev, us10yPrev, sp500Prev,
+        vix, vixPrev, hy, hyPrev,
+        cnM2, cnM2Prev, cnTSF, cnTSFPrev,
+        valuation, flow,
+        ma90
+    } = data;
+
+    const copperLb = (copper != null) ? (copper / 2204.62262) : null;
+    const goldOil = (gold != null && oil != null) ? (gold / oil) : null;
+    const copperOil = (copperLb != null && oil != null) ? (copperLb / oil) : null;
+    const stockOil = (sp500 != null && oil != null) ? (sp500 / oil) : null;
+
+    const goldOilMA = ma90 && ma90.gold && ma90.oil ? (ma90.gold / ma90.oil) : null;
+    const goldOilMAEst = (goldOilMA == null && ma90 && ma90.oil && gold != null) ? (gold / ma90.oil) : null;
+    const goldOilMAToUse = goldOilMA != null ? goldOilMA : goldOilMAEst;
+    const goldOilMALabel = goldOilMA != null
+        ? goldOilMA.toFixed(2)
+        : (goldOilMAEst != null ? `估算 ${goldOilMAEst.toFixed(2)}` : "N/A");
+    const copperOilMA = ma90 && ma90.copper && ma90.oil ? ((ma90.copper / 2204.62262) / ma90.oil) : null;
+    const stockOilMA = ma90 && ma90.sp500 && ma90.oil ? (ma90.sp500 / ma90.oil) : null;
+
+    const goldOilTrend = trendLabel(goldOil, goldOilMAToUse);
+    const copperOilTrend = trendLabel(copperOil, copperOilMA);
+    const stockOilTrend = trendLabel(stockOil, stockOilMA);
+    const oilTrend = trendLabel(oil, ma90 && ma90.oil ? ma90.oil : null);
+    const us10yTrend = trendLabel(us10y, ma90 && ma90.us10y ? ma90.us10y : null);
+    const dxyTrend = trendLabel(dxy, ma90 && ma90.dxy ? ma90.dxy : null);
+    const t5y5yTrend = trendLabel(t5y5y, ma90 && ma90.t5y5y ? ma90.t5y5y : null);
+    const real10yTrend = trendLabel(real10y, ma90 && ma90.real10y ? ma90.real10y : null);
+    const walclTrend = trendLabel(walcl, ma90 && ma90.walcl ? ma90.walcl : null);
+
+    // 10Y-2Y倒挂（优先使用数据库us2y计算，手动输入兜底）
+    let yieldCurve = null;
+    if (us10y != null && us2y != null) {
+        yieldCurve = us10y - us2y;
+    }
+
+    // Fallback oilStress if worker doesn't return it
+    const oilStressLocal = (() => {
+        if (oilStress && oilStress.level != null) return oilStress;
+        if (brent == null || oil == null) return null;
+        let level = 0;
+        if (brent >= 115) level = 3;
+        else if (brent >= 100) level = 2;
+        else if (brent >= 90) level = 1;
+        const spread = brent - oil;
+        return {
+            level,
+            brent,
+            wti: oil,
+            spread,
+            brentAbove115Days: 0,
+            wtiThreshold: {
+                "90": Number((90 - spread).toFixed(2)),
+                "100": Number((100 - spread).toFixed(2)),
+                "115": Number((115 - spread).toFixed(2))
+            }
+        };
+    })();
+
+    const cnM2Trend = (cnM2 != null && cnM2Prev != null)
+        ? (cnM2 > cnM2Prev ? "上升" : cnM2 < cnM2Prev ? "下降" : "持平")
+        : "N/A";
+    const cnTSFTrend = (cnTSF != null && cnTSFPrev != null)
+        ? (cnTSF > cnTSFPrev ? "上升" : cnTSF < cnTSFPrev ? "下降" : "持平")
+        : "N/A";
+    const chinaLiquidityState =
+        (cnM2Trend === "上升" && cnTSFTrend === "上升") ? "宽松" :
+        (cnM2Trend === "下降" && cnTSFTrend === "下降") ? "收紧" : "中性";
+
+    const dxyDown = dxyPrev !== null ? dxy < dxyPrev : false;
+    const us10yDown = us10yPrev !== null ? us10y < us10yPrev : false;
+    const vixUp = vixPrev !== null ? vix > vixPrev : false;
+    const hyUp = hyPrev !== null ? hy > hyPrev : false;
+
+        let score = 0;
+    let copperScore = 0;
+
+    // 铜油比（工业需求核心）
+    if (copperOilTrend === "上升") copperScore = 1.5;          // 原+2 → 降到+1.5
+    if (copperOilTrend === "下降") copperScore = -1.5;         // 原-1 → 加强到-1.5
+    if (ma90 && ma90.oil && oil > ma90.oil * 1.10 && copperScore > 0) {
+        copperScore = 0.8;
+    }
+    score += copperScore;
+
+    // 股油比（企业利润）
+    if (stockOilTrend === "上升") score += 1;
+
+    // 金油比（避险/通胀）
+    if (goldOilTrend === "上升") score -= 1;
+
+    // 10Y 和 DXY（鸽派友好）
+    if (us10yTrend === "下降" || us10yDown) score += 1;
+    if (dxyTrend === "下降" || dxyDown) score += 1;
+
+    // 通胀预期 + 实际利率
+    if (t5y5y != null) {
+        if (t5y5yTrend === "上升") score -= 1;
+        if (t5y5yTrend === "下降") score += 1;
+    }
+    if (real10y != null) {
+        if (real10y > 2.2) score -= 1;
+        if (real10y < 1) score += 1;
+    }
+
+    // 风险惩罚（VIX/HY）——阈值上调
+    if (vix != null) {
+        if (vix > 35) score -= 2;
+        else if (vix > 28) score -= 1;
+    }
+    if (hy != null) {
+        if (hy > 6) score -= 2;
+        else if (hy > 5) score -= 1;
+    }
+
+    // 油价冲击（关键调整：level 3 只扣1.5）
+    if (oilStress && oilStress.level != null) {
+        if (oilStress.level === 1) score -= 0.5;
+        if (oilStress.level === 2) score -= 1;
+        if (oilStress.level === 3) score -= 1.5;
+    }
+
+    // 事件冲击（大幅减权重）
+    score += getEventScore() * 0.6;
+
+    // 地缘override（防止高油+战争直接喊衰退）
+    let forceStagflation = false;
+    if (getEventScore() <= -1.5 && oilStress && oilStress.level >= 2 && copperOilTrend !== "下降") {
+        forceStagflation = true;
+    }
+
+    // 阶段划分（拓宽滞胀区间，推迟衰退）
+    let stage = "";
+    let signalClass = "";
+
+    if (score >= 3) {
+        stage = "复苏";
+        signalClass = "green";
+    } else if (score >= 1) {
+        stage = "扩张";
+        signalClass = "green";
+    } else if (score >= -1.5) {
+        stage = "扩张后期";
+        signalClass = "yellow";
+    } else if (score >= -4.5 || forceStagflation) {
+        stage = "滞胀";
+        signalClass = "yellow";
+    } else {
+        stage = "衰退";
+        signalClass = "red";
+    }
+
+    if (forceStagflation && stage === "衰退") {
+        stage = "滞胀（地缘通胀冲击）";
+        signalClass = "yellow";
+    }
+
+    // 保留你原来的油价冲击特殊处理（可选保留）
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const oilShockAlert = marketAlerts.some(a => a.indexOf("油价24h上涨") !== -1);
+    if (score <= -1 && copperOilTrend === "上升" && oilTrend === "上升"){
+        stage = "扩张后期（通胀冲击）";
+        signalClass = "yellow";
+    } else if (oilShockAlert && copperOilTrend === "上升"){
+        stage = "扩张后期（通胀冲击）";
+        signalClass = "yellow";
+    }
+    const growthState = (copperOilTrend === "上升" || stockOilTrend === "上升") ? "偏强" :
+        (copperOilTrend === "下降" && stockOilTrend === "下降") ? "偏弱" : "中性";
+    const inflationState = (t5y5yTrend === "上升" || goldOilTrend === "上升") ? "上升" :
+        (t5y5yTrend === "下降" && goldOilTrend === "下降") ? "下降" : "中性";
+    const liquidityState = walclTrend === "上升" ? "宽松" :
+        walclTrend === "下降" ? "收紧" : "中性";
+    const riskState = (vix != null && vix > 25) || (hy != null && hy > 4) ? "上升" : "温和";
+
+    const macroSummary = `增长${growthState}，通胀${inflationState}，流动性${liquidityState}，风险${riskState}。`;
+    const valuationState = valuation && valuation.state ? valuation.state : "N/A";
+    const valuationNote = valuation && valuation.current != null
+        ? `SP500 ${valuation.current.toFixed(2)}｜MA200 ${valuation.ma200 != null ? valuation.ma200.toFixed(2) : "N/A"}｜52W高 ${valuation.high52 != null ? valuation.high52.toFixed(2) : "N/A"}`
+        : "暂无估值数据";
+    const flowState = flow && flow.state ? flow.state : "N/A";
+    const flowNote = flow && flow.details ? flow.details : "暂无资金确认数据";
+    const industryNote = data.industry && data.industry.details ? data.industry.details : "暂无产业趋势数据";
+
+    document.getElementById("macroLight").innerHTML = `<span class="signal ${signalClass}"></span>${stage}（评分 ${score.toFixed(1)}）`;
+    document.getElementById("macroAdvice").innerHTML = `
+        <div><strong>宏观状态：</strong>${stage}</div>
+        <div><strong>关键指标：</strong></div>
+        <ul>
+            <li>金油比：${goldOil != null ? goldOil.toFixed(2) : "N/A"}</li>
+            <li>铜油比：${copperOil != null ? copperOil.toFixed(3) : "N/A"}</li>
+            <li>股油比：${stockOil != null ? stockOil.toFixed(2) : "N/A"}</li>
+            <li>10Y：${us10y.toFixed(2)}</li>
+            <li>DXY (Trade-Weighted)：${dxy.toFixed(2)}</li>
+            <li>Brent：${brent != null ? brent.toFixed(2) : "N/A"}</li>
+            <li>SP500：${sp500 ? sp500.toFixed(2) : "N/A"}</li>
+            <li>VIX：${vix ? vix.toFixed(2) : "N/A"}</li>
+            <li>HY利差：${hy ? hy.toFixed(2) : "N/A"}</li>
+            <li>年盈亏平衡通胀率 (T5YIE)：${t5y5y ? t5y5y.toFixed(2) : "N/A"}</li>
+            <li>10Y 实际利率：${real10y ? real10y.toFixed(2) : "N/A"}</li>
+            <li>10Y-2Y倒挂：${yieldCurve != null ? yieldCurve.toFixed(2) : "N/A"}</li>
+        </ul>
+           <div><strong style="color:#374151;">HY利差区间宏观含义参考：</strong></div>
+        <ul style="color:#6b7280;">
+            <li>HY &lt;5%：利差稳定 → 金融压力有限</li>
+            <li>5%≤HY≤7%：利差扩大 → 信用压力增加</li>
+            <li>HY&gt;7%：利差高位 → 金融风险上升</li>
+        </ul>
+        <div style="color:#6b7280; font-size: 11px; margin-top: 4px;">
+            <strong>HY利差本质：</strong>高收益债收益率减去同期限美债收益率，由违约风险、流动性风险、风险偏好和经济预期共同决定；当市场更怕风险时，投资人要求更高补偿，利差就会扩大。<br>
+            <strong>直白地说：</strong>经济好、企业盈利稳、违约担忧低，利差通常收窄；经济转弱、融资环境变差、违约担忧上升，利差通常扩大。
+        </div>
+        <div><strong>90日趋势：</strong></div>
+        <ul>
+            <li>金油比：${goldOilTrend}（MA90 ${goldOilMALabel}）</li>
+            <li>铜油比：${copperOilTrend}（MA90 ${copperOilMA ? copperOilMA.toFixed(3) : "N/A"}）</li>
+            <li>股油比：${stockOilTrend}（MA90 ${stockOilMA ? stockOilMA.toFixed(2) : "N/A"}）</li>
+        </ul>
+        <div><strong>宏观结构：</strong></div>
+        <ul>
+            <li>增长：${growthState}</li>
+            <li>通胀：${inflationState}</li>
+            <li>流动性：${liquidityState}</li>
+            <li>风险：${riskState}</li>
+            <li>中国流动性：${chinaLiquidityState}</li>
+        </ul>
+        <div><strong>宏观总结：</strong>${macroSummary}</div>
+        ${buildOilStressModule(oilStressLocal, data.oilDate, data.brentDate, data.brentFut, data.brentFutDate)}
+        <div><strong>AI策略提示：</strong></div>
+        ${buildStrategy(stage, {
+            goldTrend: goldOilTrend,
+            copperTrend: copperOilTrend,
+            stockTrend: stockOilTrend,
+            vix: vix,
+            hy: hy
+        })}
+        ${buildChinaAllocation(stage, chinaLiquidityState)}
+        ${buildOilStressChina(oilStressLocal)}
+        ${buildTurningPoints({
+            stagflationTurn: oilTrend === "上升" && copperOilTrend === "下降" && t5y5yTrend === "上升" && stockOilTrend === "下降",
+            recessionTurn: copperOilTrend === "下降" && ((hy != null && hy > 4) || (vix != null && vix > 25)),
+            commodityTop: oilTrend === "上升" && copperOilTrend === "下降" && dxyTrend === "上升"
+        })}
+        ${buildEventImpact()}
+        ${buildConsistencyCheck(stage, {
+            goldOilTrend,
+            copperOilTrend,
+            stockOilTrend,
+            oilTrend
+        })}
+        <div style="margin-top:10px;"><strong>产业周期代理（TradingView）：</strong></div>
+        <div class="macro-tag-row">
+            <button class="macro-tag" onclick="loadChart('SMH')">SMH（AI/半导体）</button>
+            <button class="macro-tag" onclick="loadChart('XES')">XES（油服）</button>
+            <button class="macro-tag" onclick="loadChart('GRID')">GRID（电网）</button>
+        </div>
+        <div style="font-size:11px;color:#374151;margin-top:4px;">
+            当前信号：${industryNote}
+        </div>
+        <div style="margin-top:8px;"><strong>商品结构（现货替代观察）：</strong></div>
+        <div class="macro-tag-row">
+            <button class="macro-tag" onclick="loadChart('TVC:USOIL')">USOIL</button>
+            <button class="macro-tag" onclick="loadChart('TVC:UKOIL')">UKOIL</button>
+            <button class="macro-tag" onclick="loadChart('COPPER')">COPPER</button>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:6px;">
+            说明：部分地区 CL1!/BRN1!/HG1! 不可用，先用 TVC 现货方向参考。
+        </div>
+        <div style="margin-top:8px;"><strong>资金周期（美股代理）：</strong></div>
+        <div class="macro-tag-row">
+            <button class="macro-tag" onclick="loadChart('QQQ/SPY')">QQQ/SPY</button>
+            <button class="macro-tag" onclick="loadChart('IWM/SPY')">IWM/SPY</button>
+            <button class="macro-tag" onclick="loadChart('HYG/IEF')">HYG/IEF</button>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:6px;">
+            QQQ/SPY 上行=成长偏好；IWM/SPY 上行=小盘风险偏好；HYG/IEF 上行=信用风险改善。
+        </div>
+        <div style="font-size:11px;color:#374151;margin-top:4px;">
+            当前信号：${flowNote}
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#555;">
+            数据口径：铜 USD/ton → USD/lb；油 USD/barrel；DXY 为贸易加权指数（FRED）。
+        </div>
+    `;
+
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+    }catch(err){
+        document.getElementById("macroLight").innerHTML = `<span class="signal red"></span>解析失败`;
+        document.getElementById("macroAdvice").innerHTML = `宏观解析异常：${String(err)}`;
+        metaEl.textContent = `更新时间：${new Date().toLocaleString()}`;
+        return;
+    }
+}
+
+async function fetchAlerts(){
+    const listEl = document.getElementById("alertList");
+    listEl.textContent = "正在获取预警...";
+    try{
+        const res = await fetch(`${DATA_SOURCE.proxyUrl}?endpoint=alerts`);
+        const data = await res.json();
+        if (!data || data.status !== "ok"){
+            listEl.textContent = data && data.message ? data.message : "预警数据不可用";
+            return;
+        }
+
+        const translateNewsTitle = (title) => {
+            if (!title) return "";
+            let t = title;
+            const map = [
+                [/war|conflict|clash|tensions/ig, "战争/冲突"],
+                [/oil|crude|energy/ig, "油价/能源"],
+                [/inflation/ig, "通胀"],
+                [/rate hike|rates|yields|bond/ig, "利率/收益率"],
+                [/stocks|equities|shares|index/ig, "股市/指数"],
+                [/gold/ig, "黄金"],
+                [/dollar|usd|dxy/ig, "美元/美元指数"],
+                [/recession/ig, "衰退"],
+                [/risk/ig, "风险"]
+            ];
+            const original = t;
+            map.forEach(([re, cn]) => {
+                t = t.replace(re, cn);
+            });
+            if (t === original) return "（无直译，保留英文原文）";
+            return t;
+        };
+
+        const translateMarketAlert = (text) => {
+            if (!text) return "";
+            const m = text.match(/油价24h上涨([0-9.]+)%/);
+            if (m) return `Oil +${m[1]}% in 24h → energy shock risk`;
+            return "Market alert";
+        };
+
+        const marketItems = (data.marketAlerts || []).map(a => {
+            const en = translateMarketAlert(a);
+            return `
+                <li>
+                    <span class="alert-tag">市场</span>
+                    <div class="alert-title-cn">CN: ${a}</div>
+                    <div class="alert-title-en">EN: ${en}</div>
+                </li>`;
+        }).join("");
+
+        const newsItems = (data.newsAlerts || []).map(a => {
+            if (typeof a === "string"){
+                const cn = translateNewsTitle(a);
+                return `
+                    <li>
+                        <span class="alert-tag">事件</span>
+                        <div class="alert-title-en">EN: ${a}</div>
+                        <div class="alert-title-cn">CN: ${cn}</div>
+                    </li>`;
+            }
+            const title = a.title || "";
+            const score = (a.score != null && Number.isFinite(a.score)) ? a.score : null;
+            const stars = a.stars || "";
+            const translated = a.translated || "";
+            const link = a.link || "";
+            const tag = a.tag || "事件";
+            const safeLink = link ? `<a href="${link}" target="_blank" rel="noopener">来源</a>` : "";
+            const enLine = a.display || (score != null ? `${title}，${stars}，影响评分${score}分` : title);
+            const cnBase = translated || translateNewsTitle(title);
+            const cn = score != null ? `${cnBase}，${stars}，影响评分${score}分` : cnBase;
+            return `
+                <li>
+                    <span class="alert-tag">${tag}</span>
+                    <div class="alert-title-en">EN: ${enLine} ${safeLink}</div>
+                    <div class="alert-title-cn">CN: ${cn}</div>
+                </li>`;
+        }).join("");
+
+        const marketBlock = marketItems
+            ? `<div><strong>市场异常</strong><ul>${marketItems}</ul></div>`
+            : `<div><strong>市场异常</strong><div>无</div></div>`;
+
+        const newsBlock = newsItems
+            ? `<div style="margin-top:6px;"><strong>宏观事件</strong><ul>${newsItems}</ul></div>`
+            : `<div style="margin-top:6px;"><strong>宏观事件</strong><div>无</div></div>`;
+
+        const summary = data.summary ? `<div class="alert-meta">${data.summary}</div>` : "";
+
+        listEl.innerHTML = `${marketBlock}${newsBlock}${summary}`;
+        window.__alertData = data;
+    }catch(err){
+        listEl.textContent = "预警数据获取失败";
+    }
+}
+
+function backToQuotes(){
+    document.getElementById("translate-panel").style.display = "none";
+    document.getElementById("news-panel").style.display = "none";
+    document.getElementById("chart-wrap").style.display = "block";
+    document.getElementById("cycle-bar").style.display = "flex";
+    document.getElementById("back-to-quotes").style.display = "none";
+    updateStockChart();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function toggleMacroPanel(evt){
+    const panel = document.getElementById("macroPanel");
+    const btn = evt && evt.currentTarget ? evt.currentTarget : null;
+    const collapsed = panel.classList.toggle("collapsed");
+    if (btn) btn.textContent = collapsed ? "展开总览" : "收起总览";
+}
+
+function toggleSubPanel(panelId, btnId, collapseText, expandText){
+    const panel = document.getElementById(panelId);
+    const btn = document.getElementById(btnId);
+    if (!panel) return;
+    const collapsed = panel.classList.toggle("panel-collapsed");
+    if (btn) btn.textContent = collapsed ? expandText : collapseText;
+}
+
+function toggleDrawMode(){
+    const body = document.body;
+    const btn = document.getElementById("drawToggleBtn");
+    const enabled = body.classList.toggle("draw-mode");
+    if (btn) btn.textContent = enabled ? "draw on" : "draw";
+}
+
+function toggleQuoteGrid(){
+    const grid = document.getElementById("quote-grid");
+    const btn = document.getElementById("quoteToggleBtn");
+    if (!grid) return;
+    const collapsed = grid.classList.toggle("collapsed");
+    if (btn) btn.textContent = collapsed ? "展开报价" : "折叠报价";
+}
+
+function toggleChartWrap(){
+    const wrap = document.getElementById("chart-wrap");
+    const bar = document.getElementById("cycle-bar");
+    const btn = document.getElementById("chartToggleBtn");
+    if (!wrap) return;
+    const collapsed = wrap.classList.toggle("collapsed");
+    wrap.style.display = collapsed ? "none" : "block";
+    if (bar) bar.style.display = collapsed ? "none" : "flex";
+    if (btn) btn.textContent = collapsed ? "展开图表" : "折叠图表";
+    document.body.classList.toggle("chart-collapsed", collapsed);
+    if (collapsed) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+}
+
+async function copyMacro(){
+    const light = document.getElementById("macroLight");
+    const advice = document.getElementById("macroAdvice");
+    const meta = document.getElementById("macroMeta");
+    const alertTitle = document.getElementById("alertTitle");
+    const alertData = window.__alertData || {};
+    const marketAlerts = Array.isArray(alertData.marketAlerts) ? alertData.marketAlerts : [];
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const alertLines = [];
+    if (marketAlerts.length){
+        alertLines.push("市场异常：");
+        marketAlerts.forEach(a => alertLines.push("• " + a));
+    }
+    if (newsAlerts.length){
+        alertLines.push("宏观事件：");
+        newsAlerts.forEach(a => {
+            if (typeof a === "string"){
+                alertLines.push("• " + a);
+            } else {
+                const t = a.title || "";
+                const l = a.link || "";
+                const tag = a.tag || "事件";
+                alertLines.push("• [" + tag + "] " + t + (l ? " (" + l + ")" : ""));
+            }
+        });
+    }
+    if (alertData.summary) alertLines.push(alertData.summary);
+    const alertText = alertLines.join("\n");
+    const text = [
+        "宏观AI策略",
+        light ? light.textContent.trim() : "",
+        advice ? advice.textContent.trim() : "",
+        meta ? meta.textContent.trim() : "",
+        alertTitle ? alertTitle.textContent.trim() : "宏观预警",
+        alertText || "无"
+    ].filter(Boolean).join("\n");
+    try{
+        await navigator.clipboard.writeText(text);
+        alert("已复制宏观AI策略");
+    }catch(err){
+        alert("复制失败，请检查浏览器权限");
+    }
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight){
+    const paragraphs = String(text || "").split("\n");
+    let currentY = y;
+    paragraphs.forEach((paragraph, idx) => {
+        if (!paragraph.trim()){
+            currentY += lineHeight;
+            return;
+        }
+        let line = "";
+        for (const ch of paragraph) {
+            const testLine = line + ch;
+            if (ctx.measureText(testLine).width > maxWidth && line) {
+                ctx.fillText(line, x, currentY);
+                line = ch;
+                currentY += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        if (line) {
+            ctx.fillText(line, x, currentY);
+            currentY += lineHeight;
+        }
+        if (idx !== paragraphs.length - 1) currentY += 2;
+    });
+    return currentY;
+}
+
+function measureWrappedTextHeight(ctx, text, maxWidth, lineHeight){
+    const paragraphs = String(text || "").split("\n");
+    let height = 0;
+    paragraphs.forEach((paragraph, idx) => {
+        if (!paragraph.trim()){
+            height += lineHeight;
+            return;
+        }
+        let line = "";
+        for (const ch of paragraph) {
+            const testLine = line + ch;
+            if (ctx.measureText(testLine).width > maxWidth && line) {
+                height += lineHeight;
+                line = ch;
+            } else {
+                line = testLine;
+            }
+        }
+        if (line) height += lineHeight;
+        if (idx !== paragraphs.length - 1) height += 2;
+    });
+    return height;
+}
+
+function closeAlertSharePreview(){
+    const existing = document.getElementById("alert-share-preview");
+    if (existing) existing.remove();
+}
+
+async function shareAlertImageFile(file){
+    if (!(navigator.share && window.File)) {
+        alert("当前浏览器不支持系统分享，请使用下载图片。");
+        return false;
+    }
+    const shareData = {
+        title: "宏观预警高影响新闻",
+        text: "分享当前页面三星以上宏观预警新闻",
+        files: [file]
+    };
+    const canShare = navigator.canShare ? navigator.canShare(shareData) : true;
+    if (!canShare) {
+        alert("当前环境不支持文件分享，请使用下载图片。");
+        return false;
+    }
+    try {
+        await navigator.share(shareData);
+        return true;
+    } catch (err) {
+        if (err && err.name === "AbortError") return false;
+        alert("系统分享失败，请改用下载图片。");
+        return false;
+    }
+}
+
+function openAlertSharePreview({ dataUrl, file, filename, count, subtitle }){
+    closeAlertSharePreview();
+
+    const overlay = document.createElement("div");
+    overlay.id = "alert-share-preview";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:999999;background:rgba(15,23,42,0.78);display:flex;align-items:center;justify-content:center;padding:16px;";
+
+    const card = document.createElement("div");
+    card.style.cssText = "width:min(92vw,560px);max-height:92vh;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.28);display:flex;flex-direction:column;";
+
+    const head = document.createElement("div");
+    head.style.cssText = "padding:16px 18px 10px;border-bottom:1px solid #e5e7eb;";
+    head.innerHTML = `
+        <div style="font-size:18px;font-weight:700;color:#111827;">预警分享预览</div>
+        <div style="margin-top:6px;font-size:12px;color:#6b7280;">已筛选当前页面 ${count} 条三星以上新闻</div>
+        <div style="margin-top:4px;font-size:12px;color:#9ca3af;">${subtitle}</div>
+    `;
+
+    const body = document.createElement("div");
+    body.style.cssText = "padding:14px;background:#f8fafc;overflow:auto;";
+
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.alt = "宏观预警分享图";
+    img.style.cssText = "display:block;width:100%;height:auto;border-radius:12px;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,0.08);";
+    body.appendChild(img);
+
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;gap:10px;padding:14px 16px 16px;border-top:1px solid #e5e7eb;flex-wrap:wrap;";
+
+    const shareBtn = document.createElement("button");
+    shareBtn.type = "button";
+    shareBtn.textContent = "系统分享";
+    shareBtn.style.cssText = "flex:1;min-width:110px;background:#b45309;color:#fff;border:none;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600;";
+    shareBtn.onclick = async () => {
+        const ok = await shareAlertImageFile(file);
+        if (ok) closeAlertSharePreview();
+    };
+
+    const downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.textContent = "下载图片";
+    downloadBtn.style.cssText = "flex:1;min-width:110px;background:#0f766e;color:#fff;border:none;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600;";
+    downloadBtn.onclick = () => {
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.textContent = "关闭";
+    closeBtn.style.cssText = "min-width:88px;background:#e5e7eb;color:#111827;border:none;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600;";
+    closeBtn.onclick = closeAlertSharePreview;
+
+    actions.appendChild(shareBtn);
+    actions.appendChild(downloadBtn);
+    actions.appendChild(closeBtn);
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) closeAlertSharePreview();
+    });
+
+    card.appendChild(head);
+    card.appendChild(body);
+    card.appendChild(actions);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+}
+
+async function shareHighImpactAlertsImage(){
+    const alertData = window.__alertData || {};
+    const newsAlerts = Array.isArray(alertData.newsAlerts) ? alertData.newsAlerts : [];
+    const highImpact = newsAlerts.filter(item => typeof item !== "string" && Number(item.score) >= 6);
+
+    if (!newsAlerts.length){
+        alert("预警数据还没加载完成，请稍后再试。");
+        return;
+    }
+
+    if (!highImpact.length){
+        const lowerImpact = newsAlerts.filter(item => typeof item !== "string" && Number(item.score) >= 3);
+        if (lowerImpact.length) {
+            alert(`当前页面暂无三星以上新闻，现有 ${lowerImpact.length} 条一到二星新闻。`);
+        } else {
+            alert("当前页面暂无可导出的预警新闻。");
+        }
+        return;
+    }
+
+    const title = "宏观预警高影响新闻";
+    const subtitle = alertData.summary || `导出时间：${new Date().toLocaleString()}`;
+    const footer = "HGCD宏观事件";
+    const width = 1080;
+    const padding = 48;
+    const lineHeight = 34;
+    const itemGap = 22;
+    const headerReserve = 180;
+    const footerReserve = 180;
+
+    let canvas, ctx;
+    try {
+        canvas = document.createElement("canvas");
+        ctx = canvas.getContext("2d");
+        if (!ctx) {
+            throw new Error("Canvas context not available");
+        }
+    } catch (e) {
+        alert("您的浏览器不支持图片生成功能");
+        return;
+    }
+
+    ctx.font = "28px -apple-system, BlinkMacSystemFont, sans-serif";
+
+    const blocks = highImpact.map((item, index) => {
+        const stars = item.stars || "";
+        const score = item.score != null ? `影响评分${item.score}分` : "";
+        const en = `${index + 1}. ${item.title || ""} ${stars} ${score}`.trim();
+        const cnBase = item.translated || "";
+        const cn = cnBase ? `CN: ${cnBase}` : "";
+        const link = item.link ? `来源: ${item.link}` : "";
+        return [en, cn, link].filter(Boolean);
+    });
+
+    const measureHeight = () => {
+        let h = padding + headerReserve;
+        blocks.forEach(lines => {
+            ctx.font = "28px -apple-system, BlinkMacSystemFont, sans-serif";
+            h += measureWrappedTextHeight(ctx, lines[0], width - padding * 2, lineHeight);
+            for (let i = 1; i < lines.length; i++) {
+                ctx.font = i === 1
+                    ? "24px -apple-system, BlinkMacSystemFont, sans-serif"
+                    : "20px -apple-system, BlinkMacSystemFont, sans-serif";
+                h += 4;
+                h += measureWrappedTextHeight(ctx, lines[i], width - padding * 2 - 12, lineHeight);
+            }
+            h += itemGap + 12;
+        });
+        h += footerReserve;
+        return h;
+    };
+
+    canvas.width = width;
+    canvas.height = measureHeight();
+
+    const gradient = ctx.createLinearGradient(0, 0, width, canvas.height);
+    gradient.addColorStop(0, "#fff7ed");
+    gradient.addColorStop(1, "#eff6ff");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, canvas.height);
+
+    ctx.fillStyle = "#9a3412";
+    ctx.font = "bold 42px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(title, padding, 72);
+
+    ctx.fillStyle = "#6b7280";
+    ctx.font = "22px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.fillText(subtitle, padding, 112);
+
+    let currentY = padding + 122;
+    blocks.forEach(lines => {
+        ctx.fillStyle = "#111827";
+        ctx.font = "28px -apple-system, BlinkMacSystemFont, sans-serif";
+        currentY = wrapCanvasText(ctx, lines[0], padding, currentY, width - padding * 2, lineHeight);
+        for (let i = 1; i < lines.length; i++) {
+            ctx.fillStyle = i === 1 ? "#1d4ed8" : "#6b7280";
+            ctx.font = i === 1
+                ? "24px -apple-system, BlinkMacSystemFont, sans-serif"
+                : "20px -apple-system, BlinkMacSystemFont, sans-serif";
+            currentY = wrapCanvasText(ctx, lines[i], padding + 12, currentY + 4, width - padding * 2 - 12, lineHeight);
+        }
+        currentY += itemGap;
+        ctx.strokeStyle = "#fed7aa";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, currentY - 10);
+        ctx.lineTo(width - padding, currentY - 10);
+        ctx.stroke();
+        currentY += 12;
+    });
+
+    const footerTop = canvas.height - footerReserve + 56;
+    ctx.strokeStyle = "#fdba74";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, footerTop - 22);
+    ctx.lineTo(width - padding, footerTop - 22);
+    ctx.stroke();
+
+    ctx.fillStyle = "#92400e";
+    ctx.font = "bold 24px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(footer, width - padding, canvas.height - 64);
+    ctx.textAlign = "left";
+
+    const filename = `macro-alerts-${new Date().toISOString().slice(0,10)}.png`;
+    const dataUrl = canvas.toDataURL("image/png");
+
+    try{
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+        if (!blob) {
+            throw new Error("无法生成图片文件");
+        }
+        const file = new File([blob], filename, { type: "image/png" });
+        openAlertSharePreview({
+            dataUrl,
+            file,
+            filename,
+            count: highImpact.length,
+            subtitle
+        });
+    }catch(err){
+        console.error("分享图片生成失败:", err);
+        alert("分享图片生成失败，请稍后重试。");
+    }
+}
+
+
+function toggleTranslate(){
+    const panel = document.getElementById("translate-panel");
+    const showing = panel.style.display !== "none";
+    if (showing) {
+        backToQuotes();
+        return;
+    }
+    panel.style.display = "block";
+    document.getElementById("news-panel").style.display = "none";
+    document.getElementById("chart-wrap").style.display = "none";
+    document.getElementById("cycle-bar").style.display = "none";
+    document.getElementById("back-to-quotes").style.display = "block";
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function toggleNews(){
+    const panel = document.getElementById("news-panel");
+    const showing = panel.style.display !== "none";
+    if (showing) {
+        backToQuotes();
+        return;
+    }
+    panel.style.display = "block";
+    document.getElementById("translate-panel").style.display = "none";
+    document.getElementById("chart-wrap").style.display = "none";
+    document.getElementById("cycle-bar").style.display = "none";
+    document.getElementById("back-to-quotes").style.display = "block";
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const RSI_API_SOURCES = [
+    { name: "proxy", type: "proxy", priority: 1 },
+    { name: "twelvedata", type: "twelvedata", apiKey: "9739029be2174a14a23485c91380abe3", priority: 2 },
+    { name: "twelvedata_demo", type: "twelvedata", apiKey: "demo", priority: 3 }
+];
+
+const SYMBOL_MAP = {
+    "BTCUSD": { twelvedata: "BTC/USD", twelvedataAlt: ["BTCUSD"], proxy: "BTCUSD" },
+    "UKOIL": { twelvedata: "UKOIL", twelvedataAlt: ["BRENT", "BRN", "BZ"], proxy: "UKOIL" },
+    "BRENT": { twelvedata: "UKOIL", twelvedataAlt: ["BRENT", "BRN", "BZ"], proxy: "BRENT" },
+    "BRN": { twelvedata: "UKOIL", twelvedataAlt: ["BRENT", "BRN", "BZ"], proxy: "BRENT" },
+    "BZ": { twelvedata: "UKOIL", twelvedataAlt: ["BRENT", "BRN", "BZ"], proxy: "BRENT" },
+    "USOIL": { twelvedata: "USOIL", twelvedataAlt: ["WTI", "CL"], proxy: "USOIL" },
+    "WTI": { twelvedata: "USOIL", twelvedataAlt: ["WTI", "CL"], proxy: "USOIL" },
+    "CL": { twelvedata: "USOIL", twelvedataAlt: ["WTI", "CL"], proxy: "USOIL" },
+    "XAUUSD": { twelvedata: "XAU/USD", twelvedataAlt: ["XAUUSD"], proxy: "XAUUSD" },
+    "XAU/USD": { twelvedata: "XAU/USD", twelvedataAlt: ["XAUUSD"], proxy: "XAUUSD" },
+    "GOLD": { twelvedata: "XAU/USD", twelvedataAlt: ["XAUUSD"], proxy: "XAUUSD" },
+    "GC": { twelvedata: "XAU/USD", twelvedataAlt: ["XAUUSD"], proxy: "XAUUSD" },
+    "SP500": { twelvedata: "SPX", twelvedataAlt: ["SP500"], proxy: "SP500" },
+    "DXY": { twelvedata: "DXY", twelvedataAlt: [], proxy: "DXY" }
+};
+
+const INTERVAL_MAP = {
+    "30": "30min",
+    "60": "1h",
+    "240": "4h",
+    "D": "1day",
+    "W": "1week",
+    "M": "1month"
+};
+
+let currentApiIndex = 0;
+let apiFailCount = {};
+let requestQueue = [];
+let isProcessingQueue = false;
+const MAX_CONCURRENT_REQUESTS = 3;
+const REQUEST_DELAY = 200;
+
+async function queueRequest(fn){
+    return new Promise((resolve, reject) => {
+        requestQueue.push({ fn, resolve, reject });
+        processQueue();
+    });
+}
+
+async function processQueue(){
+    if (isProcessingQueue || requestQueue.length === 0) return;
+    isProcessingQueue = true;
+    
+    const batch = requestQueue.splice(0, MAX_CONCURRENT_REQUESTS);
+    
+    await Promise.all(batch.map(async (item) => {
+        try{
+            const result = await item.fn();
+            item.resolve(result);
+        }catch(err){
+            item.reject(err);
+        }
+    }));
+    
+    if (requestQueue.length > 0){
+        await new Promise(r => setTimeout(r, REQUEST_DELAY));
+    }
+    
+    isProcessingQueue = false;
+    if (requestQueue.length > 0){
+        processQueue();
+    }
+}
+
+function getNextApiKey(){
+    const sortedSources = RSI_API_SOURCES.sort((a, b) => a.priority - b.priority);
+    for (const source of sortedSources){
+        const failCount = apiFailCount[source.name] || 0;
+        if (failCount < 3){
+            return source;
+        }
+    }
+    apiFailCount = {};
+    return sortedSources[0];
+}
+
+function markApiFailure(apiName){
+    apiFailCount[apiName] = (apiFailCount[apiName] || 0) + 1;
+    console.warn(`API ${apiName} 失败次数: ${apiFailCount[apiName]}`);
+}
+
+function markApiSuccess(apiName){
+    apiFailCount[apiName] = 0;
+}
+
+const RSI_MONITOR_CONFIG = {
+    symbols: [
+        { id: "btcusd", name: "BTCUSD", tvSymbol: "BTCUSD" },
+        { id: "ukoil", name: "UKOIL", tvSymbol: "UKOIL" },
+        { id: "xauusd", name: "XAUUSD", tvSymbol: "XAUUSD" }
+    ],
+    timeframes: [
+        { id: "30m", label: "30分钟", interval: "30", minutes: 30 },
+        { id: "1h", label: "1小时", interval: "60", minutes: 60 },
+        { id: "4h", label: "4小时", interval: "240", minutes: 240 },
+        { id: "1d", label: "日线", interval: "D", minutes: 1440 },
+        { id: "1w", label: "周线", interval: "W", minutes: 10080 },
+        { id: "1M", label: "月线", interval: "M", minutes: 43200 }
+    ],
+    oversoldThreshold: 30,
+    overboughtThreshold: 70,
+    resonanceCount: 3
+};
+
+let rsiMonitorData = {};
+let rsiMonitorInterval = null;
+
+function toggleRsiMonitor(){
+    const panel = document.getElementById("rsiMonitorPanel");
+    const btn = document.getElementById("rsiMonitorToggleBtn");
+    if (!panel) return;
+    const collapsed = panel.classList.toggle("collapsed");
+    if (btn) btn.textContent = collapsed ? "RSI监控" : "收起RSI";
+    if (!collapsed){
+        fetchRsiMonitorData();
+        if (!rsiMonitorInterval){
+            rsiMonitorInterval = setInterval(fetchRsiMonitorData, 1800000);
+        }
+    } else {
+        if (rsiMonitorInterval){
+            clearInterval(rsiMonitorInterval);
+            rsiMonitorInterval = null;
+        }
+    }
+}
+
+function calculateRSI(closes, period = 14){
+    if (!closes || closes.length < period + 1) return null;
+    
+    let prevAvgGain = 0;
+    let prevAvgLoss = 0;
+    
+    for (let i = 1; i <= period; i++){
+        const change = closes[i] - closes[i - 1];
+        if (change > 0) prevAvgGain += change;
+        else prevAvgLoss += Math.abs(change);
+    }
+    
+    prevAvgGain = prevAvgGain / period;
+    prevAvgLoss = prevAvgLoss / period;
+    
+    for (let i = period + 1; i < closes.length; i++){
+        const change = closes[i] - closes[i - 1];
+        const gain = change > 0 ? change : 0;
+        const loss = change < 0 ? Math.abs(change) : 0;
+        
+        prevAvgGain = (prevAvgGain * (period - 1) + gain) / period;
+        prevAvgLoss = (prevAvgLoss * (period - 1) + loss) / period;
+    }
+    
+    if (prevAvgLoss === 0) return 100;
+    const rs = prevAvgGain / prevAvgLoss;
+    return 100 - (100 / (1 + rs));
+}
+
+async function fetchRsiForSymbol(symbol, interval){
+    return queueRequest(async () => {
+        const symbolMap = SYMBOL_MAP[symbol] || { twelvedata: symbol, twelvedataAlt: [], proxy: symbol };
+        const intervalMap = INTERVAL_MAP[interval] || interval;
+        
+        for (let attempt = 0; attempt < RSI_API_SOURCES.length; attempt++){
+            const apiSource = getNextApiKey();
+            
+            if (apiSource.type === "proxy"){
+                try{
+                    const proxyUrl = DATA_SOURCE.proxyUrl;
+                    const url = `${proxyUrl}?endpoint=rsi&symbol=${symbolMap.proxy}&interval=${intervalMap}`;
+                    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                    const data = await res.json();
+                    
+                    if (data.status === "ok" && data.rsi != null){
+                        markApiSuccess(apiSource.name);
+                        return { rsi: data.rsi, time: data.time || new Date().toISOString() };
+                    }
+                    
+                    console.warn(`Proxy RSI error for ${symbol}:`, data.message);
+                    markApiFailure(apiSource.name);
+                }catch(err){
+                    markApiFailure(apiSource.name);
+                    console.error(`Proxy RSI fetch error for ${symbol}:`, err.message);
+                }
+            }
+            
+            if (apiSource.type === "twelvedata"){
+                const symbolsToTry = [symbolMap.twelvedata, ...(symbolMap.twelvedataAlt || [])];
+                
+                for (const twelvedataSymbol of symbolsToTry){
+                    try{
+                        const url = `https://api.twelvedata.com/time_series?symbol=${twelvedataSymbol}&interval=${intervalMap}&outputsize=50&apikey=${apiSource.apiKey}`;
+                        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                        const data = await res.json();
+                        
+                        if (data.status === "error"){
+                            console.warn(`TwelveData error for ${symbol} (${twelvedataSymbol}):`, data.message);
+                            continue;
+                        }
+                        
+                        if (!data || !data.values || data.values.length < 15){
+                            console.warn(`TwelveData insufficient data for ${symbol} (${twelvedataSymbol})`);
+                            continue;
+                        }
+                        
+                        markApiSuccess(apiSource.name);
+                        const closes = data.values.map(v => parseFloat(v.close)).reverse();
+                        const rsi = calculateRSI(closes);
+                        const lastTime = data.values[0].datetime;
+                        return { rsi, time: lastTime };
+                    }catch(err){
+                        console.error(`RSI fetch error for ${symbol} ${interval}:`, err.message);
+                    }
+                }
+                
+                markApiFailure(apiSource.name);
+            }
+        }
+        
+        return null;
+    });
+}
+
+function normalizeRsiSymbol(input){
+    const raw = String(input || "").trim().toUpperCase();
+    const compact = raw.replace(/\s+/g, "");
+    const aliases = {
+        "BRENT": "BRENT",
+        "UKOIL": "UKOIL",
+        "BRN": "BRENT",
+        "BZ": "BRENT",
+        "BZ=F": "BRENT",
+        "GOLD": "XAUUSD",
+        "XAU": "XAUUSD",
+        "XAU/USD": "XAUUSD",
+        "GC": "XAUUSD",
+        "GC=F": "XAUUSD",
+        "WTI": "USOIL",
+        "CL": "USOIL",
+        "CL=F": "USOIL"
+    };
+    return aliases[compact] || compact;
+}
+
+function addCustomRsiSymbol(){
+    const input = document.getElementById("rsi-custom-symbol");
+    if (!input) return;
+    
+    const symbol = normalizeRsiSymbol(input.value);
+    if (!symbol) return;
+    
+    const existingIds = RSI_MONITOR_CONFIG.symbols.map(s => s.id);
+    const symbolId = symbol.toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    if (existingIds.includes(symbolId)){
+        alert(`${symbol} 已在监控列表中`);
+        return;
+    }
+    
+    RSI_MONITOR_CONFIG.symbols.push({
+        id: symbolId,
+        name: symbol,
+        tvSymbol: symbol
+    });
+    
+    const grid = document.getElementById("rsi-monitor-grid");
+    if (!grid) return;
+    
+    const card = document.createElement("div");
+    card.className = "rsi-symbol-card";
+    card.id = `rsi-${symbolId}`;
+    
+    let timeframesHtml = RSI_MONITOR_CONFIG.timeframes.map(tf => 
+        `<div class="rsi-timeframe-row"><span class="rsi-tf-label">${tf.label}</span><span class="rsi-tf-value" id="${symbolId}-${tf.id}">加载中...</span></div>`
+    ).join("");
+    
+    card.innerHTML = `
+        <div class="rsi-symbol-header">
+            <a href="javascript:void(0)" onclick="loadChart('${symbol}')" style="color:#374151;text-decoration:none;cursor:pointer;">${symbol}</a>
+            <span style="cursor:pointer;margin-left:auto;margin-right:6px;" onclick="removeRsiSymbol('${symbolId}')">✕</span>
+            <span class="alert-badge" id="${symbolId}-alert"></span>
+        </div>
+        ${timeframesHtml}
+        <div class="rsi-update-time" id="${symbolId}-time">--</div>
+    `;
+    
+    grid.appendChild(card);
+    input.value = "";
+    
+    fetchRsiForCustomSymbolParallel(symbolId);
+}
+
+function removeRsiSymbol(symbolId){
+    const card = document.getElementById(`rsi-${symbolId}`);
+    if (card) card.remove();
+    
+    RSI_MONITOR_CONFIG.symbols = RSI_MONITOR_CONFIG.symbols.filter(s => s.id !== symbolId);
+    delete rsiMonitorData[symbolId];
+}
+
+async function fetchRsiForCustomSymbol(symbolId){
+    const symbol = RSI_MONITOR_CONFIG.symbols.find(s => s.id === symbolId);
+    if (!symbol) return;
+    
+    const symbolData = {};
+    let lastUpdateTime = null;
+    
+    for (const tf of RSI_MONITOR_CONFIG.timeframes){
+        const result = await fetchRsiForSymbol(symbol.tvSymbol, tf.interval);
+        if (result){
+            symbolData[tf.id] = result.rsi;
+            if (!lastUpdateTime) lastUpdateTime = result.time;
+            updateRsiDisplay(symbol.id, tf.id, result.rsi);
+        }
+    }
+    
+    if (lastUpdateTime){
+        const timeEl = document.getElementById(`${symbol.id}-time`);
+        if (timeEl) timeEl.textContent = lastUpdateTime;
+    }
+    
+    rsiMonitorData[symbol.id] = symbolData;
+    checkRsiResonance(symbol.id, symbolData);
+}
+
+async function fetchRsiForCustomSymbolParallel(symbolId){
+    const symbol = RSI_MONITOR_CONFIG.symbols.find(s => s.id === symbolId);
+    if (!symbol) return;
+    
+    const symbolData = {};
+    let lastUpdateTime = null;
+    
+    const promises = RSI_MONITOR_CONFIG.timeframes.map(async (tf) => {
+        const result = await fetchRsiForSymbol(symbol.tvSymbol, tf.interval);
+        if (result){
+            symbolData[tf.id] = result.rsi;
+            if (!lastUpdateTime) lastUpdateTime = result.time;
+            updateRsiDisplay(symbol.id, tf.id, result.rsi);
+        } else {
+            const el = document.getElementById(`${symbolId}-${tf.id}`);
+            if (el) el.textContent = "无数据";
+        }
+    });
+    
+    await Promise.all(promises);
+    
+    if (lastUpdateTime){
+        const timeEl = document.getElementById(`${symbol.id}-time`);
+        if (timeEl) timeEl.textContent = lastUpdateTime;
+    }
+    
+    rsiMonitorData[symbol.id] = symbolData;
+    checkRsiResonance(symbol.id, symbolData);
+}
+
+async function fetchRsiMonitorData(){
+    const promises = RSI_MONITOR_CONFIG.symbols.map(async (symbol) => {
+        const symbolData = {};
+        let lastUpdateTime = null;
+        
+        const tfPromises = RSI_MONITOR_CONFIG.timeframes.map(async (tf) => {
+            const result = await fetchRsiForSymbol(symbol.tvSymbol, tf.interval);
+            if (result){
+                symbolData[tf.id] = result.rsi;
+                if (!lastUpdateTime) lastUpdateTime = result.time;
+                updateRsiDisplay(symbol.id, tf.id, result.rsi);
+            }
+        });
+        
+        await Promise.all(tfPromises);
+        
+        if (lastUpdateTime){
+            const timeEl = document.getElementById(`${symbol.id}-time`);
+            if (timeEl) timeEl.textContent = lastUpdateTime;
+        }
+        
+        rsiMonitorData[symbol.id] = symbolData;
+        checkRsiResonance(symbol.id, symbolData);
+    });
+    
+    await Promise.all(promises);
+}
+
+function updateRsiDisplay(symbolId, tfId, rsi){
+    const el = document.getElementById(`${symbolId}-${tfId}`);
+    if (!el) return;
+    
+    el.textContent = rsi != null ? rsi.toFixed(1) : "--";
+    el.classList.remove("oversold", "overbought", "neutral");
+    
+    if (rsi != null){
+        if (rsi <= RSI_MONITOR_CONFIG.oversoldThreshold){
+            el.classList.add("oversold");
+            // 只监控BTCUSD的1小时RSI
+            if (tfId === "1h" && symbolId === "btcusd") {
+                sendRsiEmailAlert(symbolId, "超卖", rsi, "1小时");
+            }
+        } else if (rsi >= RSI_MONITOR_CONFIG.overboughtThreshold){
+            el.classList.add("overbought");
+            // 只监控BTCUSD的1小时RSI
+            if (tfId === "1h" && symbolId === "btcusd") {
+                sendRsiEmailAlert(symbolId, "超买", rsi, "1小时");
+            }
+        } else {
+            el.classList.add("neutral");
+        }
+    }
+}
+
+async function sendRsiEmailAlert(symbolId, type, rsiValue, timeframe) {
+    // 检查时间：只在白天7点到晚上12点监控
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const beijingHour = (utcHour + 8) % 24; // 转换为北京时间（UTC+8）
+    
+    // 如果不在7:00-24:00之间，不发送邮件
+    if (beijingHour < 7) {
+        console.log(`监控时间已过，当前为非监控时段（北京时间${beijingHour}:00）`);
+        return;
+    }
+    
+    // 检查是否已发送过提醒（避免重复发送）
+    const alertKey = `rsi_alert_${symbolId}_1h_${type}`;
+    const lastAlert = localStorage.getItem(alertKey);
+    const timestamp = Date.now();
+
+    // 如果1小时内已发送过相同类型的提醒，则不再发送
+    if (lastAlert && (timestamp - parseInt(lastAlert)) < 3600000) {
+        return;
+    }
+
+    // 获取邮件配置
+    const emailConfig = JSON.parse(localStorage.getItem('rsi_email_config') || '{}');
+    if (!emailConfig.enabled || !emailConfig.address) {
+        console.log('RSI邮件提醒未配置或未启用');
+        return;
+    }
+
+    // 获取所有品种的所有周期RSI值
+    const allSymbols = ['btcusd', 'ukoil', 'xauusd'];
+    const symbolNames = { btcusd: "BTCUSD", ukoil: "UKOIL", xauusd: "XAUUSD" };
+    const tfLabels = {
+        '30m': '30分钟',
+        '1h': '1小时',
+        '4h': '4小时',
+        '1d': '日线',
+        '1w': '周线',
+        '1M': '月线'
+    };
+
+    let allDataMessage = '';
+    for (const symId of allSymbols) {
+        const symName = symbolNames[symId];
+        const symValues = [];
+
+        for (const tfId of ['30m', '1h', '4h', '1d', '1w', '1M']) {
+            const el = document.getElementById(`${symId}-${tfId}`);
+            if (el && el.textContent !== '--') {
+                const value = parseFloat(el.textContent);
+                if (!isNaN(value)) {
+                    symValues.push(`${tfLabels[tfId]}: ${value.toFixed(1)}`);
+                }
+            }
+        }
+
+        if (symValues.length > 0) {
+            allDataMessage += `【${symName}】\n${symValues.join('\n')}\n\n`;
+        }
+    }
+
+    const subject = `${type}提醒 - BTCUSD`;
+    const message = `BTCUSD ${timeframe} ${type}：当前为 ${rsiValue.toFixed(1)}，已触及阈值！
+
+${allDataMessage}时间：${new Date().toLocaleString('zh-CN')}`;
+
+    try {
+        // 调用Worker发送邮件
+        const response = await fetch('https://hg-macro-fred.wubairan.workers.dev/?endpoint=send-email', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                to: emailConfig.address,
+                subject: subject,
+                body: message
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log(`RSI邮件提醒已发送：${subject}`);
+            // 记录已发送，避免重复
+            localStorage.setItem(alertKey, timestamp.toString());
+
+            // 显示通知
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(subject, { body: message });
+            }
+        } else {
+            console.error('RSI邮件提醒发送失败:', result.error || result.message);
+        }
+    } catch (error) {
+        console.error('RSI邮件提醒发送失败:', error);
+    }
+}
+
+function showRsiEmailConfig() {
+    const panel = document.getElementById('rsi-email-config-panel');
+    if (!panel) return;
+
+    // 切换显示/隐藏
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+
+    // 加载已保存的配置
+    const emailConfig = JSON.parse(localStorage.getItem('rsi_email_config') || '{}');
+    const addressInput = document.getElementById('rsi-email-address');
+    const enabledCheckbox = document.getElementById('rsi-email-enabled');
+
+    if (addressInput) addressInput.value = emailConfig.address || '';
+    if (enabledCheckbox) enabledCheckbox.checked = emailConfig.enabled || false;
+}
+
+function saveRsiEmailConfig() {
+    const address = document.getElementById('rsi-email-address')?.value || '';
+    const enabled = document.getElementById('rsi-email-enabled')?.checked || false;
+
+    if (!address) {
+        alert('请输入邮箱地址');
+        return;
+    }
+
+    const emailConfig = { address, enabled };
+    localStorage.setItem('rsi_email_config', JSON.stringify(emailConfig));
+
+    alert('配置已保存！');
+    console.log('RSI邮件配置已保存:', emailConfig);
+}
+
+function checkRsiResonance(symbolId, data){
+    const alertEl = document.getElementById(`${symbolId}-alert`);
+    if (!alertEl) return;
+    
+    alertEl.className = "alert-badge";
+    alertEl.textContent = "";
+    
+    const values = Object.values(data).filter(v => v != null);
+    if (values.length === 0) return;
+    
+    const oversoldCount = values.filter(v => v <= RSI_MONITOR_CONFIG.oversoldThreshold).length;
+    const overboughtCount = values.filter(v => v >= RSI_MONITOR_CONFIG.overboughtThreshold).length;
+    
+    if (oversoldCount >= RSI_MONITOR_CONFIG.resonanceCount){
+        alertEl.classList.add("resonance");
+        alertEl.textContent = `超卖共振(${oversoldCount})`;
+        showRsiAlert(symbolId, "超卖共振", oversoldCount);
+    } else if (overboughtCount >= RSI_MONITOR_CONFIG.resonanceCount){
+        alertEl.classList.add("resonance");
+        alertEl.textContent = `超买共振(${overboughtCount})`;
+        showRsiAlert(symbolId, "超买共振", overboughtCount);
+    } else if (oversoldCount > 0){
+        alertEl.classList.add("oversold");
+        alertEl.textContent = `超卖(${oversoldCount})`;
+    } else if (overboughtCount > 0){
+        alertEl.classList.add("overbought");
+        alertEl.textContent = `超买(${overboughtCount})`;
+    }
+}
+
+function showRsiAlert(symbolId, type, count){
+    const symbolNames = { btcusd: "BTCUSD", ukoil: "UKOIL", xauusd: "XAUUSD" };
+    const symbolName = symbolNames[symbolId] || symbolId.toUpperCase();
+    const message = `${symbolName} RSI ${type}：${count}个周期同时出现极值！`;
+    
+    if ("Notification" in window && Notification.permission === "granted"){
+        new Notification("RSI极值共振预警", { body: message });
+    }
+    
+    console.warn(`[RSI预警] ${message}`);
+}
+
+window.onload = function(){
+    renderQuoteGrid();
+    initQuoteObserver();
+    loadChart("BTCUSD");
+    fetchAlerts();
+    setInterval(fetchAlerts, 300000);
+    macroCheck();
+    setInterval(macroCheck, 86400000);
+    
+    fetchRsiMonitorData();
+    rsiMonitorInterval = setInterval(fetchRsiMonitorData, 1800000);
+    
+    if ("Notification" in window && Notification.permission === "default"){
+        Notification.requestPermission();
+    }
+};
+</script>
+<script>
+(function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('from') !== 'workbench') return;
+    const btn = document.createElement('button');
+    btn.textContent = '返回工作台';
+    btn.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:rgba(31,122,92,0.94);color:#fff;border:none;border-radius:999px;padding:12px 16px;font-size:13px;font-weight:bold;box-shadow:0 10px 30px rgba(0,0,0,0.16);';
+    btn.onclick = function () {
+        window.location.href = new URL('物流工作台.html', window.location.href).href;
+    };
+    document.body.appendChild(btn);
+})();
+</script></body>
+</html>
