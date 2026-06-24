@@ -882,7 +882,7 @@ function updateStockChart(symbolInput){
             { id: "RSI@tv-basicstudies" },
             { id: "BB@tv-basicstudies", inputs: { length: 20 } },
             { id: "MASimple@tv-basicstudies", inputs: { length: 120 } },
-            { id: "EMA@tv-basicstudies", inputs: { length: 250 } }
+            { id: "MASimple@tv-basicstudies", inputs: { length: 250 } }
         ],
         studies_overrides: {
             "RSI.rsi.linewidth": 2,
@@ -894,12 +894,12 @@ function updateStockChart(symbolInput){
             "bollinger bands.lower.linewidth": 1,
             "bollinger bands.lower.color": "#FFA500",
             "bollinger bands.background.color": "#FFA50033",
-            "moving average.ma.linestyle": 2,
+            "moving average.ma.linestyle": 0,
             "moving average.ma.linewidth": 1,
             "moving average.ma.color": "#808080",
-            "moving average exponential.ma.linestyle": 0,
-            "moving average exponential.ma.linewidth": 3,
-            "moving average exponential.ma.color": "#FF0000"
+            "moving average_1.ma.linestyle": 0,
+            "moving average_1.ma.linewidth": 2,
+            "moving average_1.ma.color": "#808080"
         }
     });
 
