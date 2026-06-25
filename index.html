@@ -878,6 +878,7 @@ function updateStockChart(symbolInput){
         save_image:true,
 
         container_id:"stock-chart-container",
+        enabled_features: ["countdown"],
         studies: [
             { id: "RSI@tv-basicstudies" },
             { id: "BB@tv-basicstudies", inputs: { length: 20 } },
