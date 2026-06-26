@@ -472,7 +472,7 @@ input{
 
 <div class="control-panel">
 
-    <div class="chart-grid" id="quote-grid"></div>
+    <div class="chart-grid collapsed" id="quote-grid"></div>
 
     <div class="action-row">
         <input type="text" id="stock-search" placeholder="自定义代码 如 BTCUSDT / 600519" style="flex:1;">
@@ -494,7 +494,7 @@ input{
         </button>
         <button id="quoteToggleBtn" onclick="toggleQuoteGrid()"
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
-        折叠报价
+        展开报价
         </button>
         <button id="chartToggleBtn" onclick="toggleChartWrap()"
         style="background:#111827;color:#fff;border:none;padding:0 10px;border-radius:8px;">
@@ -522,7 +522,7 @@ input{
         </button>
         <button id="rsiMonitorToggleBtn" onclick="toggleRsiMonitor()"
         style="background:#166534;color:#fff;border:none;padding:0 10px;border-radius:8px;">
-        收起RSI
+        RSI监控
         </button>
     </div>
 
@@ -540,7 +540,7 @@ input{
             </div>
         </div>
 
-        <div id="rsiMonitorPanel">
+        <div id="rsiMonitorPanel" class="collapsed">
             <div id="rsiMonitorTitle">RSI多周期监控 <span style="font-weight:normal;font-size:10px;color:#6b7280;">(每30分钟更新)</span></div>
             <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
                 <input type="text" id="rsi-custom-symbol" placeholder="输入代码如 XAUUSD" style="flex:1;padding:4px 8px;border-radius:4px;border:1px solid #d1d5db;font-size:11px;">
