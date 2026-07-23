@@ -880,8 +880,7 @@ function updateStockChart(symbolInput){
         container_id:"stock-chart-container",
         enabled_features: ["countdown"],
         studies: [
-            { id: "RSI@tv-basicstudies" },
-            { id: "BB@tv-basicstudies", inputs: { length: 20 } }
+            { id: "RSI@tv-basicstudies" }
         ],
         studies_overrides: {
             "RSI.rsi.linewidth": 2,
