@@ -891,9 +891,10 @@ function updateStockChart(symbolInput){
         save_image:true,
 
         container_id:"stock-chart-container",
-        enabled_features: ["countdown"],
+        enabled_features: ["countdown", "study_templates", "use_localstorage_for_settings"],
         studies: [
-            { id: "RSI@tv-basicstudies" }
+            { id: "RSI@tv-basicstudies" },
+            { id: "PivotPointStandard@tv-basicstudies" }
         ],
         studies_overrides: {
             "RSI.rsi.linewidth": 2,
